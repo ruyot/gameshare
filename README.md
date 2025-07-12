@@ -158,4 +158,4 @@ All components are built with Tailwind CSS and can be easily customized by modif
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the View-Only License (VOL) 1.0 License. See license for more details.
