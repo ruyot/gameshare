@@ -8,8 +8,12 @@ export async function GET(request: NextRequest) {
   const steamLoginUrl = new URL('https://steamcommunity.com/openid/login')
   steamLoginUrl.searchParams.set('openid.ns', 'http://specs.openid.net/auth/2.0')
   steamLoginUrl.searchParams.set('openid.mode', 'checkid_setup')
-  steamLoginUrl.searchParams.set('openid.return_to', `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/steam-callback?returnUrl=${encodeURIComponent(returnUrl)}`)
-  steamLoginUrl.searchParams.set('openid.realm', process.env.NEXT_PUBLIC_SITE_URL!)
+  
+  // Get site URL at runtime
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+  
+  steamLoginUrl.searchParams.set('openid.return_to', `${siteUrl}/api/auth/steam-callback?returnUrl=${encodeURIComponent(returnUrl)}`)
+  steamLoginUrl.searchParams.set('openid.realm', siteUrl)
   steamLoginUrl.searchParams.set('openid.identity', 'http://specs.openid.net/auth/2.0/identifier_select')
   steamLoginUrl.searchParams.set('openid.claimed_id', 'http://specs.openid.net/auth/2.0/identifier_select')
 

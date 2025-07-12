@@ -1,17 +1,27 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
-// Initialize Supabase Admin client
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
+// Initialize Supabase Admin client - will be created at runtime
+let supabaseAdmin: ReturnType<typeof createClient>
+
+function getSupabaseAdmin() {
+  if (!supabaseAdmin) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Missing required Supabase environment variables')
     }
+    
+    supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    })
   }
-)
+  return supabaseAdmin
+}
 
 // Steam OpenID verification
 async function verifySteamOpenID(params: URLSearchParams): Promise<string | null> {
@@ -60,7 +70,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if user already exists
-    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers()
+    const { data: existingUsers } = await getSupabaseAdmin().auth.admin.listUsers()
     const existingUser = existingUsers.users.find(u => 
       u.user_metadata?.steam_id === steamId
     )
@@ -72,7 +82,7 @@ export async function GET(request: NextRequest) {
       userId = existingUser.id
     } else {
       // Create new user
-      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+      const { data: newUser, error: createError } = await getSupabaseAdmin().auth.admin.createUser({
         email: `${steamId}@steam.local`,
         password: crypto.randomUUID(),
         email_confirm: true,
@@ -95,7 +105,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Create a session for the user using signInWithPassword
-    const { data: session, error: sessionError } = await supabaseAdmin.auth.signInWithPassword({
+    const { data: session, error: sessionError } = await getSupabaseAdmin().auth.signInWithPassword({
       email: `${steamId}@steam.local`,
       password: 'steam-user-password'
     })
