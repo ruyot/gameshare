@@ -6,6 +6,30 @@
   NODE_VERSION = "18"
   NPM_VERSION = "9"
 
+[context.production.environment]
+  NODE_ENV = "production"
+  NEXT_PUBLIC_SUPABASE_URL = "https://your-project.supabase.co"
+  NEXT_PUBLIC_SUPABASE_ANON_KEY = "your-anon-key"
+  SUPABASE_URL = "https://your-project.supabase.co"
+  SUPABASE_SERVICE_ROLE_KEY = "your-service-role-key"
+  NEXT_PUBLIC_SITE_URL = "https://your-site.netlify.app"
+
+[context.deploy-preview.environment]
+  NODE_ENV = "production"
+  NEXT_PUBLIC_SUPABASE_URL = "https://your-project.supabase.co"
+  NEXT_PUBLIC_SUPABASE_ANON_KEY = "your-anon-key"
+  SUPABASE_URL = "https://your-project.supabase.co"
+  SUPABASE_SERVICE_ROLE_KEY = "your-service-role-key"
+  NEXT_PUBLIC_SITE_URL = "https://your-site.netlify.app"
+
+[context.branch-deploy.environment]
+  NODE_ENV = "production"
+  NEXT_PUBLIC_SUPABASE_URL = "https://your-project.supabase.co"
+  NEXT_PUBLIC_SUPABASE_ANON_KEY = "your-anon-key"
+  SUPABASE_URL = "https://your-project.supabase.co"
+  SUPABASE_SERVICE_ROLE_KEY = "your-service-role-key"
+  NEXT_PUBLIC_SITE_URL = "https://your-site.netlify.app"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
