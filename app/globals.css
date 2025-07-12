@@ -1,0 +1,201 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --retro-dark: #0a0f10;
+    --neon-pink: #ff5c8d;
+    --electric-teal: #19ffe1;
+    --pixel-white: #ffffff;
+  }
+}
+
+@layer components {
+  .font-pixel {
+    font-family: var(--font-press-start), monospace;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+  }
+
+  .neon-glow-pink {
+    text-shadow: 0 0 5px #ff5c8d, 0 0 10px #ff5c8d, 0 0 15px #ff5c8d, 0 0 20px #ff5c8d;
+    filter: drop-shadow(0 0 10px #ff5c8d);
+  }
+
+  .neon-glow-teal {
+    text-shadow: 0 0 5px #19ffe1, 0 0 10px #19ffe1, 0 0 15px #19ffe1, 0 0 20px #19ffe1;
+    filter: drop-shadow(0 0 10px #19ffe1);
+  }
+
+  .pixel-border {
+    border: 2px solid;
+    border-image: repeating-linear-gradient(90deg, transparent, transparent 2px, currentColor 2px, currentColor 4px) 2;
+  }
+
+  .retro-button {
+    @apply font-pixel text-xs px-4 py-2 border-2 transition-all duration-200;
+    image-rendering: pixelated;
+    text-transform: uppercase;
+  }
+
+  .retro-button:hover {
+    transform: translateY(-2px);
+    filter: drop-shadow(0 4px 8px rgba(255, 92, 141, 0.5));
+  }
+
+  .retro-button:active {
+    transform: translateY(0px);
+  }
+
+  .scanlines {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: url("/scanlines.png") repeat;
+    opacity: 0.1;
+    pointer-events: none;
+    z-index: 1000;
+    animation: scanline-drift 20s linear infinite;
+  }
+
+  @keyframes scanline-drift {
+    0% {
+      transform: translateY(0px);
+    }
+    100% {
+      transform: translateY(20px);
+    }
+  }
+
+  .glitch-text {
+    position: relative;
+    animation: glitch 2s infinite;
+  }
+
+  .glitch-text::before,
+  .glitch-text::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .glitch-text::before {
+    animation: glitch-1 0.5s infinite;
+    color: #ff5c8d;
+    z-index: -1;
+  }
+
+  .glitch-text::after {
+    animation: glitch-2 0.5s infinite;
+    color: #19ffe1;
+    z-index: -2;
+  }
+
+  @keyframes glitch {
+    0%,
+    100% {
+      transform: translate(0);
+    }
+    20% {
+      transform: translate(-2px, 2px);
+    }
+    40% {
+      transform: translate(-2px, -2px);
+    }
+    60% {
+      transform: translate(2px, 2px);
+    }
+    80% {
+      transform: translate(2px, -2px);
+    }
+  }
+
+  @keyframes glitch-1 {
+    0%,
+    100% {
+      transform: translate(0);
+    }
+    20% {
+      transform: translate(2px, -2px);
+    }
+    40% {
+      transform: translate(-2px, 2px);
+    }
+    60% {
+      transform: translate(-2px, -2px);
+    }
+    80% {
+      transform: translate(2px, 2px);
+    }
+  }
+
+  @keyframes glitch-2 {
+    0%,
+    100% {
+      transform: translate(0);
+    }
+    20% {
+      transform: translate(-2px, 2px);
+    }
+    40% {
+      transform: translate(2px, -2px);
+    }
+    60% {
+      transform: translate(2px, 2px);
+    }
+    80% {
+      transform: translate(-2px, -2px);
+    }
+  }
+
+  .neon-grid {
+    background-image: linear-gradient(rgba(255, 92, 141, 0.3) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 92, 141, 0.3) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  .led-counter {
+    font-family: "Courier New", monospace;
+    background: #000;
+    color: #19ffe1;
+    padding: 4px 8px;
+    border: 1px solid #19ffe1;
+    text-shadow: 0 0 10px #19ffe1;
+    letter-spacing: 2px;
+  }
+
+  .crt-monitor {
+    background: radial-gradient(ellipse at center, #1a1a1a 0%, #000 100%);
+    border: 8px solid #333;
+    border-radius: 20px;
+    box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 92, 141, 0.3);
+  }
+
+  .neon-glow-pink-readable {
+    text-shadow: 0 0 2px #ff5c8d, 0 0 4px #ff5c8d, 0 0 6px #ff5c8d, 2px 2px 0px #000000;
+    filter: drop-shadow(0 0 3px #ff5c8d);
+  }
+}
+
+.bg-retro-dark {
+  background-color: var(--retro-dark);
+}
+.text-neon-pink {
+  color: var(--neon-pink);
+}
+.text-electric-teal {
+  color: var(--electric-teal);
+}
+.border-neon-pink {
+  border-color: var(--neon-pink);
+}
+.border-electric-teal {
+  border-color: var(--electric-teal);
+}
