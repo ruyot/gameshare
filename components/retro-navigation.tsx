@@ -43,7 +43,7 @@ export function RetroNavigation() {
           {/* Logo */}
           <Link href="/marketplace" className="flex items-center">
             <motion.h1
-              className="text-xl font-pixel text-neon-pink neon-glow-pink-readable glitch-text"
+              className="text-xl font-pixel text-white neon-glow-pink-readable glitch-text"
               data-text="GAME SHARE"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}

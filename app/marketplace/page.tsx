@@ -93,13 +93,13 @@ export default function MarketplacePage() {
             className="text-center mb-12"
           >
             <h1
-              className="text-4xl md:text-6xl font-pixel text-neon-pink neon-glow-pink glitch-text mb-6"
-              data-text="GAME ARCADE"
+              className="text-4xl md:text-6xl font-pixel text-white neon-glow-pink glitch-text mb-6"
+              data-text="ARCADE"
             >
-              GAME ARCADE
+              ARCADE
             </h1>
             <p className="text-electric-teal font-pixel text-sm max-w-2xl mx-auto leading-relaxed">
-              ENTER THE NEON GRID OF PREMIUM GAMING
+              PLAY, SHARE, EARN
             </p>
           </motion.div>
 

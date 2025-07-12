@@ -179,7 +179,7 @@ export default function AuthPage() {
                 transition={{ duration: 4, repeat: Number.POSITIVE_INFINITY }}
               >
                 <Gamepad2 className="w-8 h-8 text-neon-pink" />
-                <h1 className="font-pixel text-neon-pink text-lg neon-glow-pink-readable">GAME SHARE</h1>
+                <h1 className="font-pixel text-white text-lg neon-glow-pink-readable">GAME SHARE</h1>
               </motion.div>
             </div>
 
