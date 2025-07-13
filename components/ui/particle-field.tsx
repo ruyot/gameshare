@@ -42,7 +42,8 @@ export function ParticleField() {
 
       // Random angle for outward direction
       const angle = Math.random() * Math.PI * 2
-      const speed = Math.random() * 0.8 + 0.4 // Much slower speed
+      // Increase speed for longer streaks
+      const speed = Math.random() * 1.2 + 0.8 // was 0.8 + 0.4
 
       particles.push({
         x: centerX, // Start exactly at center
@@ -52,7 +53,7 @@ export function ParticleField() {
         size: Math.random() * 2 + 0.5, // Smaller particles
         color: colors[Math.floor(Math.random() * colors.length)],
         life: 0,
-        maxLife: Math.random() * 400 + 300, // Even longer life to reach edges
+        maxLife: Math.random() * 800 + 700, // was 400 + 300, now much longer
         speed: speed,
         startDistance: 0,
       })
@@ -64,7 +65,7 @@ export function ParticleField() {
     }
 
     const animate = () => {
-      // Darker fade for more dramatic effect
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
       ctx.fillStyle = "rgba(10, 15, 16, 0.12)"
       ctx.fillRect(0, 0, canvas.width, canvas.height)
 
@@ -84,7 +85,7 @@ export function ParticleField() {
         const distanceFromCenter = Math.sqrt(Math.pow(particle.x - centerX, 2) + Math.pow(particle.y - centerY, 2))
 
         // Remove particles only when they're well beyond screen edges or too old
-        const buffer = 200 // Extra buffer to ensure they reach the very edges
+        const buffer = 400 // Extra buffer to ensure they reach the very edges
         if (
           particle.x < -buffer ||
           particle.x > canvas.width + buffer ||
@@ -98,64 +99,35 @@ export function ParticleField() {
         }
 
         // Star Wars effect: Only visible after certain distance from center
-        const minVisibleDistance = 80 // Particles invisible within this radius
-        const maxDistance = Math.sqrt(Math.pow(canvas.width / 2 + buffer, 2) + Math.pow(canvas.height / 2 + buffer, 2))
+        const minVisibleDistance = 80
+        if (distanceFromCenter < minVisibleDistance) continue
 
-        if (distanceFromCenter < minVisibleDistance) {
-          continue // Skip drawing if too close to center
-        }
-
-        // Calculate alpha based on distance (fade in as they move out, fade out only at very edges)
-        const fadeInDistance = 120
-        const fadeOutStart = maxDistance * 0.85 // Start fading much closer to actual edges
-        let alpha = 0
-
-        if (distanceFromCenter < fadeInDistance) {
-          // Fade in zone
-          alpha = (distanceFromCenter - minVisibleDistance) / (fadeInDistance - minVisibleDistance)
-        } else if (distanceFromCenter < fadeOutStart) {
-          // Full visibility zone - much larger now
-          alpha = 1
-        } else {
-          // Fade out zone - only at the very edges
-          alpha = 1 - (distanceFromCenter - fadeOutStart) / (maxDistance - fadeOutStart)
-        }
-
-        alpha = Math.max(0, Math.min(1, alpha)) * 0.6 // Cap alpha and make more subtle
-
-        if (alpha <= 0) continue
-
-        // Draw hyperspace streak effect
+        // Draw streak
         ctx.save()
-        ctx.globalAlpha = alpha
-
-        // Draw the streak/trail (Star Wars hyperspace effect)
-        const streakLength = Math.min(distanceFromCenter * 0.3, 40)
-        const streakStartX = particle.x - particle.vx * streakLength
-        const streakStartY = particle.y - particle.vy * streakLength
-
-        // Gradient for the streak
-        const gradient = ctx.createLinearGradient(streakStartX, streakStartY, particle.x, particle.y)
-        gradient.addColorStop(0, particle.color + "00") // Transparent start
-        gradient.addColorStop(0.7, particle.color + "80") // Semi-transparent middle
-        gradient.addColorStop(1, particle.color + "FF") // Full opacity end
-
-        ctx.strokeStyle = gradient
+        ctx.globalAlpha = 0.7
+        ctx.beginPath()
+        ctx.moveTo(particle.x, particle.y)
+        // Draw streak backwards
+        ctx.lineTo(
+          particle.x - particle.vx * 30,
+          particle.y - particle.vy * 30
+        )
+        ctx.strokeStyle = particle.color
         ctx.lineWidth = particle.size
-        ctx.lineCap = "round"
-        ctx.beginPath()
-        ctx.moveTo(streakStartX, streakStartY)
-        ctx.lineTo(particle.x, particle.y)
-        ctx.stroke()
-
-        // Draw bright point at the end
-        ctx.shadowBlur = 8
         ctx.shadowColor = particle.color
-        ctx.fillStyle = particle.color
-        ctx.beginPath()
-        ctx.arc(particle.x, particle.y, particle.size * 0.8, 0, Math.PI * 2)
-        ctx.fill()
+        ctx.shadowBlur = 12
+        ctx.stroke()
+        ctx.restore()
 
+        // Draw glowing point at end
+        ctx.save()
+        ctx.beginPath()
+        ctx.arc(particle.x, particle.y, particle.size * 1.2, 0, Math.PI * 2)
+        ctx.fillStyle = particle.color
+        ctx.shadowColor = particle.color
+        ctx.shadowBlur = 16
+        ctx.globalAlpha = 0.8
+        ctx.fill()
         ctx.restore()
       }
 
@@ -169,7 +141,22 @@ export function ParticleField() {
     }
   }, [])
 
+  // Absolutely position the canvas behind all content
   return (
-    <canvas ref={canvasRef} className="fixed inset-0 z-0 pointer-events-none" style={{ background: "transparent" }} />
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: "100vw",
+        height: "100vh",
+        zIndex: 0,
+        pointerEvents: "none",
+      }}
+      width={typeof window !== "undefined" ? window.innerWidth : 1920}
+      height={typeof window !== "undefined" ? window.innerHeight : 1080}
+      aria-hidden="true"
+    />
   )
 }
