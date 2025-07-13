@@ -1,11 +1,13 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 
 export function StarfieldBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
+    setIsClient(true)
     const canvas = canvasRef.current
     if (!canvas) return
 
@@ -13,14 +15,18 @@ export function StarfieldBackground() {
     if (!ctx) return
 
     const resizeCanvas = () => {
-      canvas.width = window.innerWidth
-      canvas.height = window.innerHeight
+      if (typeof window !== 'undefined') {
+        canvas.width = window.innerWidth
+        canvas.height = window.innerHeight
+      }
     }
 
     resizeCanvas()
-    window.addEventListener("resize", resizeCanvas)
+    if (typeof window !== 'undefined') {
+      window.addEventListener("resize", resizeCanvas)
+    }
 
-    // Create stars
+    // Create stars with reduced count for better performance
     const stars: Array<{
       x: number
       y: number
@@ -29,73 +35,66 @@ export function StarfieldBackground() {
       prevY: number
     }> = []
 
-    for (let i = 0; i < 200; i++) {
+    for (let i = 0; i < 100; i++) {
       stars.push({
-        x: Math.random() * canvas.width - canvas.width / 2,
-        y: Math.random() * canvas.height - canvas.height / 2,
+        x: Math.random() * (canvas.width || 1200) - (canvas.width || 1200) / 2,
+        y: Math.random() * (canvas.height || 800) - (canvas.height || 800) / 2,
         z: Math.random() * 1000,
         prevX: 0,
         prevY: 0,
       })
     }
 
-    const animate = () => {
-      ctx.fillStyle = "rgba(10, 15, 16, 0.1)"
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
+    let animationId: number
 
-      ctx.translate(canvas.width / 2, canvas.height / 2)
+    const animate = () => {
+      ctx.fillStyle = "rgba(0, 0, 0, 0.1)"
+      ctx.fillRect(0, 0, canvas.width || 1200, canvas.height || 800)
 
       stars.forEach((star) => {
-        star.prevX = star.x / (star.z * 0.001)
-        star.prevY = star.y / (star.z * 0.001)
-
+        star.prevX = star.x
+        star.prevY = star.y
         star.z -= 2
-
-        if (star.z <= 0) {
-          star.x = Math.random() * canvas.width - canvas.width / 2
-          star.y = Math.random() * canvas.height - canvas.height / 2
+        if (star.z < 1) {
           star.z = 1000
-          star.prevX = star.x / (star.z * 0.001)
-          star.prevY = star.y / (star.z * 0.001)
+          star.x = Math.random() * (canvas.width || 1200) - (canvas.width || 1200) / 2
+          star.y = Math.random() * (canvas.height || 800) - (canvas.height || 800) / 2
         }
 
-        const x = star.x / (star.z * 0.001)
-        const y = star.y / (star.z * 0.001)
+        const scale = 1000 / star.z
+        star.x = star.x * scale
+        star.y = star.y * scale
 
-        const opacity = 1 - star.z / 1000
-        const size = (1 - star.z / 1000) * 2
-
-        // Draw star trail
-        ctx.strokeStyle = `rgba(25, 255, 225, ${opacity * 0.5})`
-        ctx.lineWidth = size
-        ctx.beginPath()
-        ctx.moveTo(star.prevX, star.prevY)
-        ctx.lineTo(x, y)
-        ctx.stroke()
-
-        // Draw star
-        ctx.fillStyle = `rgba(255, 92, 141, ${opacity})`
-        ctx.beginPath()
-        ctx.arc(x, y, size, 0, Math.PI * 2)
-        ctx.fill()
+        if (star.x > 0 && star.x < (canvas.width || 1200) && star.y > 0 && star.y < (canvas.height || 800)) {
+          ctx.beginPath()
+          ctx.moveTo(star.prevX, star.prevY)
+          ctx.lineTo(star.x, star.y)
+          ctx.strokeStyle = `rgba(255, 255, 255, ${scale})`
+          ctx.lineWidth = scale * 2
+          ctx.stroke()
+        }
       })
 
-      ctx.setTransform(1, 0, 0, 1, 0, 0)
-      requestAnimationFrame(animate)
+      animationId = requestAnimationFrame(animate)
     }
 
     animate()
 
     return () => {
-      window.removeEventListener("resize", resizeCanvas)
+      if (typeof window !== 'undefined') {
+        window.removeEventListener("resize", resizeCanvas)
+      }
+      if (animationId) {
+        cancelAnimationFrame(animationId)
+      }
     }
-  }, [])
+  }, [isClient])
+
+  if (!isClient) {
+    return null
+  }
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="fixed inset-0 z-0 pointer-events-none"
-      style={{ background: "var(--retro-dark)" }}
-    />
+    <canvas ref={canvasRef} className="fixed inset-0 z-0 pointer-events-none" style={{ background: "transparent" }} />
   )
 }

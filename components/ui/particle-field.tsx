@@ -1,11 +1,13 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 
 export function ParticleField() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
+    setIsClient(true)
     const canvas = canvasRef.current
     if (!canvas) return
 
@@ -13,14 +15,18 @@ export function ParticleField() {
     if (!ctx) return
 
     const resizeCanvas = () => {
-      canvas.width = window.innerWidth
-      canvas.height = window.innerHeight
+      if (typeof window !== 'undefined') {
+        canvas.width = window.innerWidth
+        canvas.height = window.innerHeight
+      }
     }
 
     resizeCanvas()
-    window.addEventListener("resize", resizeCanvas)
+    if (typeof window !== 'undefined') {
+      window.addEventListener("resize", resizeCanvas)
+    }
 
-    // Star Wars hyperspace-style particles
+    // Star Wars hyperspace-style particles with reduced count
     const particles: Array<{
       x: number
       y: number
@@ -37,137 +43,102 @@ export function ParticleField() {
     const colors = ["#FF5C8D", "#19FFE1", "#FFFFFF", "#9D4EDD"]
 
     const createParticle = () => {
-      const centerX = canvas.width / 2
-      const centerY = canvas.height / 2
+      const centerX = canvas.width / 2 || 600
+      const centerY = canvas.height / 2 || 400
 
       // Random angle for outward direction
       const angle = Math.random() * Math.PI * 2
-      const speed = Math.random() * 0.8 + 0.4 // Much slower speed
+      const speed = Math.random() * 0.8 + 0.4
 
       particles.push({
-        x: centerX, // Start exactly at center
+        x: centerX,
         y: centerY,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        size: Math.random() * 2 + 0.5, // Smaller particles
+        size: Math.random() * 2 + 0.5,
         color: colors[Math.floor(Math.random() * colors.length)],
         life: 0,
-        maxLife: Math.random() * 400 + 300, // Even longer life to reach edges
+        maxLife: Math.random() * 400 + 300,
         speed: speed,
         startDistance: 0,
       })
     }
 
     // Create fewer initial particles for better performance
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 20; i++) {
       createParticle()
     }
 
-    const animate = () => {
-      // Darker fade for more dramatic effect
-      ctx.fillStyle = "rgba(10, 15, 16, 0.12)"
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
+    let animationId: number
 
-      const centerX = canvas.width / 2
-      const centerY = canvas.height / 2
+    const animate = () => {
+      // Clear canvas with fade effect
+      ctx.fillStyle = "rgba(0, 0, 0, 0.1)"
+      ctx.fillRect(0, 0, canvas.width || 1200, canvas.height || 800)
 
       // Update and draw particles
       for (let i = particles.length - 1; i >= 0; i--) {
         const particle = particles[i]
 
-        // Move particle outward
+        // Update position
         particle.x += particle.vx
         particle.y += particle.vy
         particle.life++
 
         // Calculate distance from center
-        const distanceFromCenter = Math.sqrt(Math.pow(particle.x - centerX, 2) + Math.pow(particle.y - centerY, 2))
+        const centerX = canvas.width / 2 || 600
+        const centerY = canvas.height / 2 || 400
+        const distance = Math.sqrt(
+          Math.pow(particle.x - centerX, 2) + Math.pow(particle.y - centerY, 2)
+        )
 
-        // Remove particles only when they're well beyond screen edges or too old
-        const buffer = 200 // Extra buffer to ensure they reach the very edges
-        if (
-          particle.x < -buffer ||
-          particle.x > canvas.width + buffer ||
-          particle.y < -buffer ||
-          particle.y > canvas.height + buffer ||
-          particle.life >= particle.maxLife
-        ) {
+        // Remove particles that are too far or too old
+        if (distance > Math.max(canvas.width || 1200, canvas.height || 800) || particle.life > particle.maxLife) {
           particles.splice(i, 1)
-          createParticle() // Create new particle at center
           continue
         }
 
-        // Star Wars effect: Only visible after certain distance from center
-        const minVisibleDistance = 80 // Particles invisible within this radius
-        const maxDistance = Math.sqrt(Math.pow(canvas.width / 2 + buffer, 2) + Math.pow(canvas.height / 2 + buffer, 2))
+        // Draw particle
+        const opacity = 1 - particle.life / particle.maxLife
+        const size = particle.size * (1 + distance / 100)
 
-        if (distanceFromCenter < minVisibleDistance) {
-          continue // Skip drawing if too close to center
-        }
-
-        // Calculate alpha based on distance (fade in as they move out, fade out only at very edges)
-        const fadeInDistance = 120
-        const fadeOutStart = maxDistance * 0.85 // Start fading much closer to actual edges
-        let alpha = 0
-
-        if (distanceFromCenter < fadeInDistance) {
-          // Fade in zone
-          alpha = (distanceFromCenter - minVisibleDistance) / (fadeInDistance - minVisibleDistance)
-        } else if (distanceFromCenter < fadeOutStart) {
-          // Full visibility zone - much larger now
-          alpha = 1
-        } else {
-          // Fade out zone - only at the very edges
-          alpha = 1 - (distanceFromCenter - fadeOutStart) / (maxDistance - fadeOutStart)
-        }
-
-        alpha = Math.max(0, Math.min(1, alpha)) * 0.6 // Cap alpha and make more subtle
-
-        if (alpha <= 0) continue
-
-        // Draw hyperspace streak effect
         ctx.save()
-        ctx.globalAlpha = alpha
-
-        // Draw the streak/trail (Star Wars hyperspace effect)
-        const streakLength = Math.min(distanceFromCenter * 0.3, 40)
-        const streakStartX = particle.x - particle.vx * streakLength
-        const streakStartY = particle.y - particle.vy * streakLength
-
-        // Gradient for the streak
-        const gradient = ctx.createLinearGradient(streakStartX, streakStartY, particle.x, particle.y)
-        gradient.addColorStop(0, particle.color + "00") // Transparent start
-        gradient.addColorStop(0.7, particle.color + "80") // Semi-transparent middle
-        gradient.addColorStop(1, particle.color + "FF") // Full opacity end
-
-        ctx.strokeStyle = gradient
-        ctx.lineWidth = particle.size
-        ctx.lineCap = "round"
-        ctx.beginPath()
-        ctx.moveTo(streakStartX, streakStartY)
-        ctx.lineTo(particle.x, particle.y)
-        ctx.stroke()
-
-        // Draw bright point at the end
-        ctx.shadowBlur = 8
-        ctx.shadowColor = particle.color
+        ctx.globalAlpha = opacity
         ctx.fillStyle = particle.color
         ctx.beginPath()
-        ctx.arc(particle.x, particle.y, particle.size * 0.8, 0, Math.PI * 2)
+        ctx.arc(particle.x, particle.y, size, 0, Math.PI * 2)
         ctx.fill()
 
+        // Add glow effect
+        ctx.shadowColor = particle.color
+        ctx.shadowBlur = size * 2
+        ctx.fill()
         ctx.restore()
       }
 
-      requestAnimationFrame(animate)
+      // Occasionally add new particles
+      if (Math.random() < 0.1 && particles.length < 30) {
+        createParticle()
+      }
+
+      animationId = requestAnimationFrame(animate)
     }
 
     animate()
 
     return () => {
-      window.removeEventListener("resize", resizeCanvas)
+      if (typeof window !== 'undefined') {
+        window.removeEventListener("resize", resizeCanvas)
+      }
+      if (animationId) {
+        cancelAnimationFrame(animationId)
+      }
     }
-  }, [])
+  }, [isClient])
+
+  if (!isClient) {
+    return null
+  }
 
   return (
     <canvas ref={canvasRef} className="fixed inset-0 z-0 pointer-events-none" style={{ background: "transparent" }} />

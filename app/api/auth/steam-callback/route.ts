@@ -1,11 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import openid from 'openid';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 export async function GET(request: NextRequest) {
   try {
@@ -42,6 +36,13 @@ export async function GET(request: NextRequest) {
     const steamMatch = claimedIdentifier.match(/\/id\/(\d+)$/)
     if (!steamMatch) throw new Error('Invalid Steam ID format: ' + claimedIdentifier)
     const steamId = steamMatch[1]
+
+    // 3) Initialize Supabase only at runtime
+    const { createClient } = await import('@supabase/supabase-js')
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
     // 3) Upsert user in User table
     const { data: user, error: upsertError } = await supabaseAdmin

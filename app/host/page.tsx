@@ -4,6 +4,7 @@ import { useState } from "react"
 import { motion } from "framer-motion"
 import { Plus, Server, TrendingUp } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { HostGameCard } from "@/components/ui/host-game-card"
 import type { HostListing } from "@/components/ui/host-game-card"
 
@@ -57,6 +58,7 @@ export default function HostPage() {
     totalHours: 89,
     avgRating: 4.6,
   })
+  const router = useRouter()
 
   return (
     <div className="min-h-screen pt-16">
@@ -166,7 +168,7 @@ export default function HostPage() {
               whileTap={{ scale: 0.95 }}
             >
               <button
-                onClick={() => window.location.href = '/host/create'}
+                onClick={() => router.push('/host/create')}
                 className="bg-neon-pink text-retro-dark font-pixel text-sm px-8 py-4 border-2 border-electric-teal hover:bg-electric-teal hover:text-retro-dark transition-all duration-300 flex items-center space-x-3 mx-auto"
               >
                 <Plus className="w-5 h-5" />

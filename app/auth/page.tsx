@@ -6,6 +6,7 @@ import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { supabase } from "@/lib/supabase"
 import { User, Lock, Eye, EyeOff, Gamepad2 } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 // Steam Icon Component
 const SteamIcon = ({ className }: { className?: string }) => (
@@ -25,6 +26,7 @@ export default function AuthPage() {
   })
   const [terminalText, setTerminalText] = useState("")
   const [isTyping, setIsTyping] = useState(false)
+  const router = useRouter()
 
   const typewriterEffect = (text: string) => {
     setIsTyping(true)
@@ -50,7 +52,7 @@ export default function AuthPage() {
     try {
       typewriterEffect("CONNECTING TO STEAM NETWORK...")
       // Redirect to Steam login
-      window.location.href = `/api/auth/steam-login?returnUrl=${encodeURIComponent('/marketplace')}`
+      router.push(`/api/auth/steam-login?returnUrl=${encodeURIComponent('/marketplace')}`)
     } catch (error) {
       console.error("Steam login error:", error)
       typewriterEffect("ERROR: STEAM CONNECTION FAILED")

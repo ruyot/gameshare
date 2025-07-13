@@ -2,13 +2,35 @@
 
 import { motion } from "framer-motion"
 import { Gamepad2, Cpu, HardDrive, Wifi, Zap, Star } from "lucide-react"
+import { useState, useEffect } from "react"
 
 interface FloatingElementsProps {
   mousePosition: { x: number; y: number }
 }
 
 export function FloatingElements({ mousePosition }: FloatingElementsProps) {
+  const [isClient, setIsClient] = useState(false)
+  const [windowSize, setWindowSize] = useState({ width: 1200, height: 800 })
+  
+  useEffect(() => {
+    setIsClient(true)
+    if (typeof window !== 'undefined') {
+      setWindowSize({ width: window.innerWidth, height: window.innerHeight })
+      
+      const handleResize = () => {
+        setWindowSize({ width: window.innerWidth, height: window.innerHeight })
+      }
+      
+      window.addEventListener('resize', handleResize)
+      return () => window.removeEventListener('resize', handleResize)
+    }
+  }, [])
+
   const icons = [Gamepad2, Cpu, HardDrive, Wifi, Zap, Star]
+
+  if (!isClient) {
+    return null
+  }
 
   return (
     <div className="fixed inset-0 pointer-events-none z-10">
@@ -27,8 +49,8 @@ export function FloatingElements({ mousePosition }: FloatingElementsProps) {
               top: "50%",
             }}
             animate={{
-              x: x + (mousePosition.x - window.innerWidth / 2) * 0.1,
-              y: y + (mousePosition.y - window.innerHeight / 2) * 0.1,
+              x: x + (mousePosition.x - windowSize.width / 2) * 0.1,
+              y: y + (mousePosition.y - windowSize.height / 2) * 0.1,
               rotate: 360,
             }}
             transition={{

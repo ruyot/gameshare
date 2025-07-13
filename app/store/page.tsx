@@ -2,9 +2,10 @@
 
 import { useState } from "react"
 import { motion } from "framer-motion"
-import { Coins, Zap, Gift } from "lucide-react"
-import { RetroCarousel } from "@/components/retro-carousel"
 import { useAuth } from "@/hooks/use-auth"
+import { useRouter } from "next/navigation"
+import { DollarSign, Play, Trophy, Star, Zap, Gift, Target, Users, Clock, TrendingUp } from "lucide-react"
+import { RetroCarousel } from "@/components/retro-carousel"
 
 const tokenPackages = [
   { id: 1, tokens: 1000, price: 10, bonus: 0, popular: false, priceEnv: 'NEXT_PUBLIC_PRICE_1000_TOKENS' },
@@ -38,6 +39,7 @@ export default function StorePage() {
   const [isAdPlaying, setIsAdPlaying] = useState(false)
   const [loadingId, setLoadingId] = useState<number | null>(null)
   const { session } = useAuth()
+  const router = useRouter()
 
   const playAd = () => {
     setIsAdPlaying(true)
@@ -50,7 +52,7 @@ export default function StorePage() {
   async function buyTokens(priceEnv: string, pkgId: number) {
     if (!session?.user?.id) {
       // Redirect to login if not authenticated
-      window.location.href = '/auth'
+      router.push('/auth')
       return
     }
     
@@ -65,7 +67,7 @@ export default function StorePage() {
       body: JSON.stringify({ priceId }),
     }).then(r => r.json())
 
-    if (res.url) window.location.href = res.url
+    if (res.url) router.push(res.url)
     else {
       setLoadingId(null)
       alert(res.error || 'Checkout error')
@@ -131,7 +133,7 @@ export default function StorePage() {
                   transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
                   whileHover={{ rotateY: 720 }}
                 >
-                  <Coins className="w-8 h-8 text-retro-dark" />
+                  <DollarSign className="w-8 h-8 text-retro-dark" />
                 </motion.div>
 
                 <div className="font-pixel text-electric-teal text-lg mb-2">
