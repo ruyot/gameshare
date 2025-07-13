@@ -17,7 +17,8 @@ export function RetroNavigation() {
       // Fetch real token balance from API
       fetchUserTokens()
     } else {
-      setTokenCount(0)
+      // Show demo token count for non-authenticated users
+      setTokenCount(500)
     }
   }, [user])
 
@@ -95,14 +96,42 @@ export function RetroNavigation() {
             ))}
           </div>
 
-          {/* Token Counter & Auth */}
+          {/* Animated Token Counter */}
           <div className="flex items-center space-x-4">
             {loading ? (
               <div className="font-pixel text-electric-teal text-xs animate-pulse">LOADING...</div>
-            ) : isAuthenticated ? (
+            ) : (
+              <motion.div
+                className={`led-counter font-pixel text-xs bg-retro-dark border-2 px-3 py-1 ${
+                  isAuthenticated 
+                    ? 'border-neon-pink' 
+                    : 'border-electric-teal'
+                }`}
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.5 }}
+                whileHover={{ scale: 1.05 }}
+              >
+                <motion.span
+                  key={tokenCount}
+                  initial={{ y: -10, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                  className={isAuthenticated ? 'text-neon-pink' : 'text-electric-teal'}
+                >
+                  {tokenCount.toLocaleString().padStart(6, "0")}T
+                </motion.span>
+              </motion.div>
+            )}
+            
+            {/* User Avatar & Logout */}
+            {isAuthenticated && (
               <>
-                <div className="led-counter font-pixel text-xs">{tokenCount.toLocaleString().padStart(6, "0")}</div>
-                <div className="w-8 h-8 bg-neon-pink border-2 border-electric-teal pixel-border flex items-center justify-center">
+                <motion.div 
+                  className="w-8 h-8 bg-neon-pink border-2 border-electric-teal pixel-border flex items-center justify-center"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
                   <span
                     className="text-retro-dark font-pixel text-xs font-bold"
                     style={{
@@ -112,21 +141,16 @@ export function RetroNavigation() {
                   >
                     {user?.user_metadata?.steamId ? `S${user.user_metadata.steamId.slice(-4)}` : 'P1'}
                   </span>
-                </div>
-                <button
+                </motion.div>
+                <motion.button
                   onClick={handleLogout}
                   className="font-pixel text-xs text-white hover:text-neon-pink transition-colors duration-200"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
                   LOGOUT
-                </button>
+                </motion.button>
               </>
-            ) : (
-              <button
-                onClick={handleLogin}
-                className="font-pixel text-xs bg-neon-pink text-retro-dark px-4 py-2 border-2 border-electric-teal hover:bg-electric-teal hover:text-retro-dark transition-all duration-200"
-              >
-                LOGIN
-              </button>
             )}
           </div>
         </div>

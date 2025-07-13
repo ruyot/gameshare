@@ -48,13 +48,19 @@ export default function StorePage() {
   }
 
   async function buyTokens(priceEnv: string, pkgId: number) {
+    if (!session?.user?.id) {
+      // Redirect to login if not authenticated
+      window.location.href = '/auth'
+      return
+    }
+    
     setLoadingId(pkgId)
     const priceId = process.env[priceEnv]!
     const res = await fetch('/api/payments/create-checkout', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-user-id': session?.user?.id!,
+        'x-user-id': session.user.id,
       },
       body: JSON.stringify({ priceId }),
     }).then(r => r.json())

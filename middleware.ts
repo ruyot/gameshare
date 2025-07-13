@@ -3,7 +3,8 @@ import type { NextRequest } from 'next/server';
 import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
 
 // Define protected routes that require authentication
-const protectedRoutes = ['/host', '/profile', '/tokens', '/support'];
+// Only protect routes that actually need authentication (like profile management)
+const protectedRoutes = ['/profile'];
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
