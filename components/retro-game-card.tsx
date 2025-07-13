@@ -3,8 +3,6 @@
 import { useState } from "react"
 import { motion } from "framer-motion"
 import Image from "next/image"
-import { useRouter } from 'next/navigation'
-import { createClient } from '@supabase/supabase-js'
 
 interface RetroGame {
   id: number
@@ -23,20 +21,6 @@ interface RetroGameCardProps {
 
 export function RetroGameCard({ game }: RetroGameCardProps) {
   const [isHovered, setIsHovered] = useState(false)
-  const router = useRouter()
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-
-  async function handleProtectedClick(path: string) {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
-      router.push('/auth') // redirect to /auth instead of /api/auth/steam-login
-    } else {
-      router.push(path)
-    }
-  }
 
   return (
     <motion.div
@@ -74,7 +58,7 @@ export function RetroGameCard({ game }: RetroGameCardProps) {
             <div className="absolute top-2 right-2 led-counter text-xs">{game.timeRemaining}</div>
           )}
 
-          {/* Hover Overlay */}
+          {/* Hover Overlay - Only Play Now Button */}
           <motion.div
             className="absolute inset-0 bg-retro-dark bg-opacity-90 flex flex-col items-center justify-center"
             initial={{ opacity: 0 }}
@@ -82,29 +66,15 @@ export function RetroGameCard({ game }: RetroGameCardProps) {
             transition={{ duration: 0.3 }}
           >
             <motion.button
-              className="retro-button bg-neon-pink text-retro-dark border-neon-pink mb-2"
+              className="retro-button bg-neon-pink text-retro-dark border-neon-pink"
               initial={{ y: 20, opacity: 0 }}
               animate={{
                 y: isHovered ? 0 : 20,
                 opacity: isHovered ? 1 : 0,
               }}
               transition={{ duration: 0.3, delay: 0.1 }}
-              onClick={() => handleProtectedClick(`/play/${game.id}`)}
             >
               {game.isHosting ? "CONTINUE" : "PLAY NOW"}
-            </motion.button>
-
-            <motion.button
-              className="retro-button bg-electric-teal text-retro-dark border-electric-teal"
-              initial={{ y: 20, opacity: 0 }}
-              animate={{
-                y: isHovered ? 0 : 20,
-                opacity: isHovered ? 1 : 0,
-              }}
-              transition={{ duration: 0.3, delay: 0.2 }}
-              onClick={() => handleProtectedClick(`/host/${game.id}`)}
-            >
-              HOST GAME
             </motion.button>
           </motion.div>
         </div>
