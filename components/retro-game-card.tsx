@@ -32,7 +32,7 @@ export function RetroGameCard({ game }: RetroGameCardProps) {
   async function handleProtectedClick(path: string) {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
-      router.push('/api/auth/steam-login')
+      router.push('/auth') // redirect to /auth instead of /api/auth/steam-login
     } else {
       router.push(path)
     }

@@ -196,12 +196,13 @@ export default function AuthPage() {
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-10 transform -skew-x-12 animate-pulse" />
 
                 <SteamIcon className="w-6 h-6" />
-                <span className="relative z-10">{isLoading ? "CONNECTING TO DISCORD..." : "LOGIN WITH DISCORD"}</span>
+                <span className="relative z-10">{isLoading ? "CONNECTING TO STEAM..." : "LOGIN WITH STEAM"}</span>
               </motion.button>
 
-              <div className="text-center mt-3">
+              {/* Removed the 'Recommended for gamers' text */}
+              {/* <div className="text-center mt-3">
                 <p className="font-pixel text-xs text-electric-teal">RECOMMENDED FOR GAMERS</p>
-              </div>
+              </div> */}
             </div>
 
             {/* Divider */}

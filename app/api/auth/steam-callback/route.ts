@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
       // Continue anyway - user might already exist
     }
 
-    // 5) Create a session using admin signIn
+    // 5) Mint a session via the Admin SDK (magiclink workaround)
     const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
       email: `${steamId}@steam.local`,
@@ -143,13 +143,14 @@ export async function GET(request: NextRequest) {
 
     console.log('Session tokens generated successfully')
 
-    // 6) Redirect to auth complete page with tokens
-    const redirectUrl = new URL('/auth/complete', 'https://gamesharez.netlify.app')
-    redirectUrl.searchParams.set('access_token', accessToken)
-    redirectUrl.searchParams.set('refresh_token', refreshToken)
-    
-    console.log('Redirecting to:', redirectUrl.toString())
-    return NextResponse.redirect(redirectUrl.toString())
+    // 6) Return a clean 302 redirect to /auth/complete with tokens
+    return new NextResponse(null, {
+      status: 302,
+      headers: {
+        Location: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/complete?access_token=${accessToken}&refresh_token=${refreshToken}`,
+        'Content-Type': 'text/html; charset=utf-8',
+      },
+    })
 
   } catch (error) {
     console.error('Steam callback error:', error)
