@@ -240,7 +240,7 @@ This project is licensed under a View-Only License (VOL) 1.0, see LICENSE for mo
 
 ## Contact
 
-- **LinkedIn**: [@tahmeedt](https://www.linkedin.com/in/tahmeedtahmeedt/)
+- **LinkedIn**: [@tahmeedt](https://www.linkedin.com/in/tahmeedt/)
 - **Email**: tabeeb700@gmail.com
 - **Website**: [gamesharez.netlify.app](https://gamesharez.netlify.app/)
 
