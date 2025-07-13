@@ -9,9 +9,6 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  experimental: {
-    optimizeCss: true,
-  },
   // Disable source maps in production for smaller bundles
   productionBrowserSourceMaps: false,
   // Optimize bundle size
