@@ -1,19 +1,217 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><title>Host Demo</title></head>
+<head>
+    <meta charset="UTF-8">
+    <title>Game Stream Host</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+        }
+        h1 {
+            text-align: center;
+            color: #00ff88;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        .controls {
+            text-align: center;
+            margin: 30px 0;
+        }
+        button {
+            background: linear-gradient(45deg, #00ff88, #00cc6a);
+            color: #1a1a1a;
+            border: none;
+            padding: 15px 30px;
+            margin: 10px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,255,136,0.3);
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,255,136,0.4);
+        }
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .status-panel {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #00ff88;
+        }
+        .logs {
+            background: #1a1a1a;
+            padding: 20px;
+            height: 400px;
+            overflow-y: auto;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.4;
+            border: 1px solid #333;
+        }
+        .offer-display {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-family: monospace;
+            font-size: 12px;
+            word-break: break-all;
+            border: 1px solid #444;
+            display: none;
+        }
+        .copy-btn {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+        .copy-btn:hover {
+            background: #005a9e;
+        }
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .instructions h3 {
+            color: #00ff88;
+            margin-top: 0;
+        }
+        .instructions ol {
+            line-height: 1.6;
+        }
+    </style>
+</head>
 <body>
-  <h1>Host Demo</h1>
-  <button id="start">Start Streaming</button>
-  <button id="stop">Stop Streaming</button>
-  <pre id="logs" style="background:#f0f0f0; padding:10px;
-    height:300px; overflow:auto;"></pre>
-  <script>
-    const { ipcRenderer } = require('electron');
-    document.getElementById('start').onclick = () => ipcRenderer.invoke('start-stream');
-    document.getElementById('stop').onclick  = () => ipcRenderer.invoke('stop-stream');
-    ipcRenderer.on('log', (_, msg) => {
-      document.getElementById('logs').textContent += msg;
-    });
-  </script>
+    <div class="container">
+        <h1>🎮 Game Stream Host</h1>
+        
+        <div class="instructions">
+            <h3>How to Stream Your Game:</h3>
+            <ol>
+                <li><strong>Start the signaling server</strong> (in a separate terminal): <code>cd signaling && node index.js</code></li>
+                <li><strong>Build the streamer</strong> (if not already built): <code>cd host_streamer && cargo build --release</code></li>
+                <li><strong>Click "Start Streaming"</strong> below to launch the streamer</li>
+                <li><strong>Copy the OFFER</strong> that appears in the logs</li>
+                <li><strong>On your Mac</strong>, open the client.html file and paste the OFFER to connect</li>
+            </ol>
+        </div>
+
+        <div class="controls">
+            <button id="start">🚀 Start Streaming</button>
+            <button id="stop" disabled>🛑 Stop Streaming</button>
+        </div>
+
+        <div class="status-panel">
+            <h3>📡 Stream Status</h3>
+            <div id="status">Ready to start streaming</div>
+        </div>
+
+        <div class="offer-display" id="offerDisplay">
+            <strong>📋 WebRTC Offer (copy this to your Mac client):</strong><br>
+            <div id="offerText"></div>
+            <button class="copy-btn" onclick="copyOffer()">📋 Copy Offer</button>
+        </div>
+
+        <div class="logs" id="logs"></div>
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+        const startBtn = document.getElementById('start');
+        const stopBtn = document.getElementById('stop');
+        const logsDiv = document.getElementById('logs');
+        const statusDiv = document.getElementById('status');
+        const offerDisplay = document.getElementById('offerDisplay');
+        const offerText = document.getElementById('offerText');
+
+        function addLog(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            logsDiv.innerHTML += `[${timestamp}] ${message}`;
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        function updateStatus(message) {
+            statusDiv.textContent = message;
+        }
+
+        function copyOffer() {
+            const offer = offerText.textContent;
+            navigator.clipboard.writeText(offer).then(() => {
+                addLog('✅ Offer copied to clipboard!\n');
+            }).catch(err => {
+                addLog('❌ Failed to copy offer: ' + err + '\n');
+            });
+        }
+
+        startBtn.onclick = async () => {
+            addLog('🚀 Starting game streamer...\n');
+            updateStatus('Starting streamer...');
+            startBtn.disabled = true;
+            
+            const result = await ipcRenderer.invoke('start-stream');
+            if (result.success) {
+                updateStatus('Streamer started - waiting for connection...');
+                stopBtn.disabled = false;
+            } else {
+                updateLog('❌ Failed to start streamer: ' + result.error + '\n');
+                updateStatus('Failed to start streamer');
+                startBtn.disabled = false;
+            }
+        };
+
+        stopBtn.onclick = () => {
+            ipcRenderer.invoke('stop-stream');
+            addLog('🛑 Stopping streamer...\n');
+            updateStatus('Stopping streamer...');
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            offerDisplay.style.display = 'none';
+        };
+
+        ipcRenderer.on('log', (_, msg) => {
+            addLog(msg);
+        });
+
+        ipcRenderer.on('offer', (_, offer) => {
+            offerText.textContent = offer;
+            offerDisplay.style.display = 'block';
+            addLog('📡 WebRTC offer generated - copy it to your Mac client!\n');
+            updateStatus('Offer ready - connect from your Mac client');
+        });
+
+        // Initial status
+        addLog('🎮 Game Stream Host ready!\n');
+        addLog('Click "Start Streaming" to begin...\n');
+    </script>
 </body>
 </html>

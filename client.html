@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Stream Client</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: #00ff88;
+        }
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        button {
+            background: #00ff88;
+            color: #1a1a1a;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #00cc6a;
+        }
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        .video-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        #videoElement {
+            max-width: 100%;
+            border: 2px solid #00ff88;
+            border-radius: 10px;
+        }
+        .status {
+            background: #333;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-family: monospace;
+        }
+        .offer-input {
+            width: 100%;
+            height: 100px;
+            background: #333;
+            color: #00ff88;
+            border: 1px solid #555;
+            border-radius: 5px;
+            padding: 10px;
+            font-family: monospace;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Game Stream Client</h1>
+        
+        <div class="controls">
+            <button id="connectBtn">Connect to Stream</button>
+            <button id="disconnectBtn" disabled>Disconnect</button>
+        </div>
+
+        <div class="status" id="status">
+            Status: Ready to connect
+        </div>
+
+        <div class="video-container">
+            <video id="videoElement" autoplay playsinline muted></video>
+        </div>
+
+        <div class="status">
+            <h3>Instructions:</h3>
+            <ol>
+                <li>Start the signaling server on Windows (port 4000)</li>
+                <li>Run the Rust streamer on Windows</li>
+                <li>Copy the OFFER:&lt;json&gt; from the Windows console</li>
+                <li>Paste it in the input below and click Connect</li>
+            </ol>
+            
+            <label for="offerInput">Paste the OFFER from Windows:</label><br>
+            <textarea id="offerInput" class="offer-input" placeholder="OFFER:{"type":"offer","sdp":"..."}"></textarea>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.1/socket.io.min.js"></script>
+    <script>
+        let pc = null;
+        let socket = null;
+        const videoElement = document.getElementById('videoElement');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const statusDiv = document.getElementById('status');
+        const offerInput = document.getElementById('offerInput');
+
+        function updateStatus(message) {
+            statusDiv.textContent = `Status: ${message}`;
+            console.log(message);
+        }
+
+        async function connectToStream() {
+            try {
+                const offerText = offerInput.value.trim();
+                if (!offerText.startsWith('OFFER:')) {
+                    alert('Please paste a valid OFFER from the Windows streamer');
+                    return;
+                }
+
+                updateStatus('Connecting to signaling server...');
+                
+                // Connect to signaling server
+                socket = io('http://localhost:4000');
+                
+                socket.on('connect', () => {
+                    updateStatus('Connected to signaling server');
+                });
+
+                socket.on('disconnect', () => {
+                    updateStatus('Disconnected from signaling server');
+                });
+
+                // Create WebRTC peer connection
+                pc = new RTCPeerConnection({
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' }
+                    ]
+                });
+
+                // Handle incoming video stream
+                pc.ontrack = (event) => {
+                    updateStatus('Received video stream!');
+                    videoElement.srcObject = event.streams[0];
+                };
+
+                // Handle connection state changes
+                pc.onconnectionstatechange = () => {
+                    updateStatus(`Connection state: ${pc.connectionState}`);
+                };
+
+                pc.oniceconnectionstatechange = () => {
+                    updateStatus(`ICE state: ${pc.iceConnectionState}`);
+                };
+
+                // Parse and set the offer
+                const offerJson = offerText.substring(6); // Remove "OFFER:" prefix
+                const offer = JSON.parse(offerJson);
+                await pc.setRemoteDescription(new RTCSessionDescription(offer));
+
+                // Create answer
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+
+                // Send answer through signaling server
+                socket.emit('answer', JSON.stringify(answer));
+                updateStatus('Answer sent, waiting for connection...');
+
+                // Enable/disable buttons
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+
+            } catch (error) {
+                updateStatus(`Error: ${error.message}`);
+                console.error('Connection error:', error);
+            }
+        }
+
+        function disconnect() {
+            if (pc) {
+                pc.close();
+                pc = null;
+            }
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+            }
+            videoElement.srcObject = null;
+            connectBtn.disabled = false;
+            disconnectBtn.disabled = true;
+            updateStatus('Disconnected');
+        }
+
+        connectBtn.onclick = connectToStream;
+        disconnectBtn.onclick = disconnect;
+
+        // Handle page unload
+        window.onbeforeunload = () => {
+            disconnect();
+        };
+    </script>
+</body>
+</html> 
