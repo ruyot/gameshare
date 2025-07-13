@@ -4,87 +4,76 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
 export async function GET(request: NextRequest) {
   try {
-    const url = new URL(request.url)
-    const relyingParty = new openid.RelyingParty(
+    // 1) Verify Steam OpenID
+    const url = request.url
+    const rp = new openid.RelyingParty(
       `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/steam-callback`,
       null,
       true,
       true,
       []
     )
+    const { authenticated, claimedIdentifier } = await new Promise<any>((res, rej) =>
+      rp.verifyAssertion(url, (e, r) => e ? rej(e) : res(r))
+    )
+    if (!authenticated || !claimedIdentifier) throw new Error('Steam verification failed')
 
-    // Verify the OpenID assertion
-    const verificationResult = await new Promise<{ authenticated: boolean; claimedIdentifier?: string }>((resolve, reject) => {
-      relyingParty.verifyAssertion(url.toString(), (error, result) => {
-        if (error) {
-          reject(error)
-        } else {
-          resolve({
-            authenticated: result?.authenticated || false,
-            claimedIdentifier: result?.claimedIdentifier
-          })
-        }
-      })
-    })
+    // 2) Extract steamID64
+    const steamMatch = claimedIdentifier.match(/\/id\/(\d+)$/)
+    if (!steamMatch) throw new Error('Invalid Steam ID')
+    const steamId = steamMatch[1]
 
-    if (!verificationResult.authenticated || !verificationResult.claimedIdentifier) {
-      throw new Error('OpenID verification failed')
-    }
-
-    // Extract Steam ID from claimed identifier
-    // Steam OpenID format: https://steamcommunity.com/openid/id/76561198012345678
-    const steamIdMatch = verificationResult.claimedIdentifier.match(/\/openid\/id\/(\d+)/)
-    if (!steamIdMatch) {
-      throw new Error('Invalid Steam ID format')
-    }
-    const steamId = steamIdMatch[1]
-
-    // Upsert user into Supabase
-    const { data: user, error: userError } = await supabaseAdmin
+    // 3) Upsert your custom User table
+    const { data: user, error: upsertErr } = await supabaseAdmin
       .from('User')
-      .upsert(
-        { 
-          steamId, 
-          email: null // Steam doesn't provide email via OpenID
-        }, 
-        { onConflict: 'steamId' }
-      )
+      .upsert({ steamId }, { onConflict: 'steamId' })
       .select()
       .single()
+    if (upsertErr || !user) throw upsertErr || new Error('User upsert failed')
 
-    if (userError || !user) {
-      throw new Error('Failed to create/update user')
-    }
-
-    // Create Supabase session using signInWithPassword for existing user
-    const { data: session, error: sessionError } = await supabaseAdmin.auth.signInWithPassword({
-      email: `${steamId}@steam.local`,
-      password: 'steam-user-password'
+    // 4) Ensure a Supabase Auth user exists (id = user.id)
+    //    This will noop if they already exist.
+    await supabaseAdmin.auth.admin.createUser({
+      id: user.id,
+      user_metadata: { steamId },
     })
 
-    if (sessionError || !session) {
-      throw new Error('Failed to create session')
+    // 5) Mint a session via the Admin SDK
+    // Use generateLink to create a session
+    const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'magiclink',
+      email: `${steamId}@steam.local`
+    })
+    if (linkErr) throw linkErr || new Error('Link generation failed')
+
+    // Extract session tokens from the generated link
+    const linkUrl = new URL(linkData.properties.action_link)
+    const accessToken = linkUrl.searchParams.get('access_token')
+    const refreshToken = linkUrl.searchParams.get('refresh_token')
+    
+    if (!accessToken || !refreshToken) {
+      throw new Error('No tokens in generated link')
     }
 
-    // Redirect to complete page with tokens
-    const redirectUrl = new URL('/auth/complete', process.env.NEXT_PUBLIC_SITE_URL)
-    redirectUrl.searchParams.set('access_token', session.session.access_token)
-    redirectUrl.searchParams.set('refresh_token', session.session.refresh_token)
+    const session = {
+      access_token: accessToken,
+      refresh_token: refreshToken
+    }
 
+    // 6) Redirect to your client page
+    const redirectUrl = new URL('/auth/complete', process.env.NEXT_PUBLIC_SITE_URL)
+    redirectUrl.searchParams.set('access_token', session.access_token)
+    redirectUrl.searchParams.set('refresh_token', session.refresh_token)
     return NextResponse.redirect(redirectUrl.toString())
-  } catch (error) {
-    console.error('Steam callback error:', error)
-    return NextResponse.redirect('/auth?error=steam_callback_failed')
+
+  } catch (err) {
+    console.error(err)
+    // change this to a valid error page if you have one
+    return NextResponse.redirect('/auth/complete?error=login_failed')
   }
 } 
