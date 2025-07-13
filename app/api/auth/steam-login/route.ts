@@ -19,13 +19,13 @@ export async function GET(request: NextRequest) {
   return new Promise<NextResponse>((resolve) => {
     relyingParty.authenticate(STEAM_OPENID_URL, false, (error, authUrl) => {
       if (error || !authUrl) {
-        resolve(NextResponse.redirect('/auth?error=steam_login_failed'));
+        resolve(NextResponse.redirect(`${process.env.NEXT_PUBLIC_SITE_URL}/auth?error=steam_login_failed`));
         return;
       }
       // Add state param
       const url = new URL(authUrl);
       url.searchParams.set('state', state);
-      resolve(NextResponse.redirect(url));
+      resolve(NextResponse.redirect(url.toString()));
     });
   });
 } 
