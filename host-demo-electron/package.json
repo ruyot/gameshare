@@ -1,0 +1,11 @@
+{
+    "name": "host-demo-electron",
+    "version": "1.0.0",
+    "main": "main.js",
+    "scripts": {
+      "start": "electron ."
+    },
+    "dependencies": {
+      "electron": "^26.2.0"
+    }
+  }

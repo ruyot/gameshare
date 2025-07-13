@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Host Demo</title></head>
+<body>
+  <h1>Host Demo</h1>
+  <button id="start">Start Streaming</button>
+  <button id="stop">Stop Streaming</button>
+  <pre id="logs" style="background:#f0f0f0; padding:10px;
+    height:300px; overflow:auto;"></pre>
+  <script>
+    const { ipcRenderer } = require('electron');
+    document.getElementById('start').onclick = () => ipcRenderer.invoke('start-stream');
+    document.getElementById('stop').onclick  = () => ipcRenderer.invoke('stop-stream');
+    ipcRenderer.on('log', (_, msg) => {
+      document.getElementById('logs').textContent += msg;
+    });
+  </script>
+</body>
+</html>
