@@ -9,8 +9,12 @@ const supabaseAdmin = createClient(
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('Steam callback started')
+    
     // 1) Verify Steam OpenID
     const url = request.url
+    console.log('Verifying Steam OpenID for URL:', url)
+    
     const rp = new openid.RelyingParty(
       'https://gamesharez.netlify.app/api/auth/steam-callback',
       null,
@@ -18,62 +22,143 @@ export async function GET(request: NextRequest) {
       true,
       []
     )
-    const { authenticated, claimedIdentifier } = await new Promise<any>((res, rej) =>
-      rp.verifyAssertion(url, (e, r) => e ? rej(e) : res(r))
-    )
-    if (!authenticated || !claimedIdentifier) throw new Error('Steam verification failed')
+    
+    const verificationResult = await new Promise<any>((resolve, reject) => {
+      rp.verifyAssertion(url, (error, result) => {
+        if (error) {
+          console.error('Steam OpenID verification error:', error)
+          reject(error)
+        } else {
+          console.log('Steam OpenID verification result:', result)
+          resolve(result)
+        }
+      })
+    })
+    
+    const { authenticated, claimedIdentifier } = verificationResult
+    
+    if (!authenticated) {
+      console.error('Steam authentication failed')
+      throw new Error('Steam authentication failed')
+    }
+    
+    if (!claimedIdentifier) {
+      console.error('No claimed identifier from Steam')
+      throw new Error('No claimed identifier from Steam')
+    }
 
     // 2) Extract steamID64
     const steamMatch = claimedIdentifier.match(/\/id\/(\d+)$/)
-    if (!steamMatch) throw new Error('Invalid Steam ID')
+    if (!steamMatch) {
+      console.error('Invalid Steam ID format:', claimedIdentifier)
+      throw new Error('Invalid Steam ID format')
+    }
+    
     const steamId = steamMatch[1]
+    console.log('Extracted Steam ID:', steamId)
 
-    // 3) Upsert your custom User table
-    const { data: user, error: upsertErr } = await supabaseAdmin
+    // 3) Create or get user in your custom User table
+    const { data: user, error: upsertError } = await supabaseAdmin
       .from('User')
-      .upsert({ steamId }, { onConflict: 'steamId' })
+      .upsert(
+        { 
+          steamId,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }, 
+        { 
+          onConflict: 'steamId',
+          ignoreDuplicates: false
+        }
+      )
       .select()
       .single()
-    if (upsertErr || !user) throw upsertErr || new Error('User upsert failed')
+    
+    if (upsertError) {
+      console.error('User upsert error:', upsertError)
+      throw new Error(`User upsert failed: ${upsertError.message}`)
+    }
+    
+    if (!user) {
+      console.error('No user returned from upsert')
+      throw new Error('User upsert returned no data')
+    }
+    
+    console.log('User upserted successfully:', user.id)
 
-    // 4) Ensure a Supabase Auth user exists (id = user.id)
-    //    This will noop if they already exist.
-    await supabaseAdmin.auth.admin.createUser({
-      id: user.id,
-      user_metadata: { steamId },
-    })
+    // 4) Create Supabase Auth user if it doesn't exist
+    try {
+      const { data: authUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
+        id: user.id,
+        email: `${steamId}@steam.local`,
+        user_metadata: { 
+          steamId,
+          provider: 'steam'
+        },
+        email_confirm: true
+      })
+      
+      if (createUserError && createUserError.message !== 'User already registered') {
+        console.error('Create auth user error:', createUserError)
+        throw new Error(`Create auth user failed: ${createUserError.message}`)
+      }
+      
+      console.log('Auth user created/verified:', authUser?.user?.id)
+    } catch (authError) {
+      console.error('Auth user creation error:', authError)
+      // Continue anyway - user might already exist
+    }
 
-    // 5) Mint a session via the Admin SDK
-    // Use generateLink to create a session
-    const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
+    // 5) Create a session using admin signIn
+    const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
-      email: `${steamId}@steam.local`
+      email: `${steamId}@steam.local`,
+      options: {
+        data: {
+          steamId,
+          provider: 'steam'
+        }
+      }
     })
-    if (linkErr) throw linkErr || new Error('Link generation failed')
+    
+    if (sessionError) {
+      console.error('Session generation error:', sessionError)
+      throw new Error(`Session generation failed: ${sessionError.message}`)
+    }
+    
+    if (!sessionData?.properties?.action_link) {
+      console.error('No action link in session data')
+      throw new Error('No action link generated')
+    }
 
-    // Extract session tokens from the generated link
-    const linkUrl = new URL(linkData.properties.action_link)
-    const accessToken = linkUrl.searchParams.get('access_token')
-    const refreshToken = linkUrl.searchParams.get('refresh_token')
+    // Extract tokens from the action link
+    const actionUrl = new URL(sessionData.properties.action_link)
+    const accessToken = actionUrl.searchParams.get('access_token')
+    const refreshToken = actionUrl.searchParams.get('refresh_token')
     
     if (!accessToken || !refreshToken) {
-      throw new Error('No tokens in generated link')
+      console.error('Missing tokens in action link')
+      throw new Error('Missing access or refresh token')
     }
 
-    const session = {
-      access_token: accessToken,
-      refresh_token: refreshToken
-    }
+    console.log('Session tokens generated successfully')
 
-    // 6) Redirect to your client page
-    const redirectUrl = new URL('/auth/complete', process.env.NEXT_PUBLIC_SITE_URL)
-    redirectUrl.searchParams.set('access_token', session.access_token)
-    redirectUrl.searchParams.set('refresh_token', session.refresh_token)
+    // 6) Redirect to auth complete page with tokens
+    const redirectUrl = new URL('/auth/complete', 'https://gamesharez.netlify.app')
+    redirectUrl.searchParams.set('access_token', accessToken)
+    redirectUrl.searchParams.set('refresh_token', refreshToken)
+    
+    console.log('Redirecting to:', redirectUrl.toString())
     return NextResponse.redirect(redirectUrl.toString())
 
-  } catch (err) {
-    console.error(err)
-    // change this to a valid error page if you have one
-    return NextResponse.redirect('/auth/complete?error=login_failed')
+  } catch (error) {
+    console.error('Steam callback error:', error)
+    
+    // Redirect to error page with details
+    const errorUrl = new URL('/auth/complete', 'https://gamesharez.netlify.app')
+    errorUrl.searchParams.set('error', 'steam_login_failed')
+    errorUrl.searchParams.set('message', error instanceof Error ? error.message : 'Unknown error')
+    
+    return NextResponse.redirect(errorUrl.toString())
   }
 } 

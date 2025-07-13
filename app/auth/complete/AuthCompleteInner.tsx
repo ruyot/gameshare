@@ -18,23 +18,41 @@ export default function AuthCompleteInner() {
   useEffect(() => {
     const completeAuth = async () => {
       try {
-        // Call the Steam callback endpoint to get session tokens
-        const response = await fetch('/api/auth/steam-callback?' + searchParams.toString())
-        if (!response.ok) {
-          throw new Error('Failed to complete Steam authentication')
+        // Get tokens from URL parameters (passed from Steam callback)
+        const accessToken = searchParams.get('access_token')
+        const refreshToken = searchParams.get('refresh_token')
+        const errorParam = searchParams.get('error')
+        const errorMessage = searchParams.get('message')
+
+        // Check for errors first
+        if (errorParam) {
+          throw new Error(errorMessage || 'Authentication failed')
         }
-        const { access_token, refresh_token, user } = await response.json()
-        if (!access_token) {
-          throw new Error('No access token received')
+
+        // Check for required tokens
+        if (!accessToken || !refreshToken) {
+          throw new Error('Missing authentication tokens')
         }
+
+        console.log('Setting session with tokens...')
+
         // Set the session in Supabase client
-        const { error: sessionError } = await supabase.auth.setSession({
-          access_token,
-          refresh_token
+        const { data, error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken
         })
+
         if (sessionError) {
+          console.error('Session error:', sessionError)
           throw sessionError
         }
+
+        if (!data.session) {
+          throw new Error('No session created')
+        }
+
+        console.log('Session set successfully, redirecting...')
+
         // Redirect to marketplace
         router.push('/marketplace')
       } catch (err: any) {
@@ -44,6 +62,7 @@ export default function AuthCompleteInner() {
         setIsLoading(false)
       }
     }
+
     completeAuth()
   }, [searchParams, router])
 
