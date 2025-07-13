@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
         userId,
         type: 'deposit',
         amount: tokens,
-        stripeSessionId: session.id,
+        stripe_session_id: session.id,
         metadata: session,
       }])
     if (txnError && !txnError.message.includes('duplicate key')) {
