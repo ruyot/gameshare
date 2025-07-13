@@ -155,7 +155,7 @@ export default function ProfilePage() {
           className="text-center mb-12"
         >
           <h1
-            className="text-4xl md:text-6xl font-pixel text-neon-pink neon-glow-pink glitch-text mb-6"
+            className="text-4xl md:text-6xl font-pixel text-white neon-glow-pink glitch-text mb-6"
             data-text="PLAYER PROFILE"
           >
             PLAYER PROFILE
@@ -232,8 +232,8 @@ export default function ProfilePage() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`font-pixel text-xs px-4 py-2 border-2 transition-all duration-300 ${
                     activeTab === tab.id
-                      ? "bg-neon-pink text-retro-dark border-neon-pink"
-                      : "bg-transparent text-neon-pink border-neon-pink hover:bg-neon-pink hover:text-retro-dark"
+                      ? "bg-neon-pink text-white border-neon-pink"
+                      : "bg-transparent text-neon-pink border-neon-pink hover:bg-neon-pink hover:text-white"
                   }`}
                 >
                   {tab.label}

@@ -151,7 +151,7 @@ export function HostGameCard({ listing }: HostGameCardProps) {
           </div>
 
           <div className="flex items-center justify-between mb-2">
-            <span className="bg-electric-teal text-retro-dark px-2 py-1 font-pixel text-xs">{listing.genre}</span>
+            <span className="bg-electric-teal text-white px-2 py-1 font-pixel text-xs">{listing.genre}</span>
             <div className="flex items-center space-x-1">
               <TrendingUp className="w-3 h-3 text-neon-pink" />
               <span className="text-neon-pink font-pixel text-xs">{listing.totalEarned}T</span>

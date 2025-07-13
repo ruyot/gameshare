@@ -82,7 +82,7 @@ export function RetroGameCard({ game }: RetroGameCardProps) {
             >
               <AuthButton
                 onClick={handlePlayNow}
-                className="retro-button bg-neon-pink text-retro-dark border-neon-pink"
+                className="retro-button bg-neon-pink text-white border-neon-pink"
                 redirectTo="/marketplace"
               >
                 {game.isHosting ? "CONTINUE" : "PLAY NOW"}

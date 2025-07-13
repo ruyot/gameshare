@@ -80,14 +80,14 @@ export default function SupportPage() {
   return (
     <div className="min-h-screen pt-16 relative overflow-hidden bg-retro-dark">
       {/* Particle Field Background */}
-      <ParticleField />
+      {/* <ParticleField /> */}
 
       {/* Hero Section */}
       <section className="py-16 neon-grid">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
             <h1
-              className="text-4xl md:text-6xl font-pixel text-neon-pink neon-glow-pink glitch-text mb-6"
+              className="text-4xl md:text-6xl font-pixel text-white neon-glow-pink glitch-text mb-6"
               data-text="SUPPORT TERMINAL"
             >
               SUPPORT TERMINAL

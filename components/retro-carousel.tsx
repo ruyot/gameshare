@@ -70,7 +70,7 @@ export function RetroCarousel({ items }: RetroCarouselProps) {
                     <span className="font-pixel text-retro-dark text-xs">IMG</span>
                   </div>
 
-                  <h3 className="font-pixel text-electric-teal text-sm mb-2 neon-glow-teal">{item.title}</h3>
+                  <h3 className="font-pixel text-white text-sm mb-2 neon-glow-teal">{item.title}</h3>
 
                   <p className="font-pixel text-white text-xs leading-relaxed">{item.description}</p>
 

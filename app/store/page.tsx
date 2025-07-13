@@ -85,7 +85,7 @@ export default function StorePage() {
         <div className="max-w-7xl mx-auto px-4 text-center">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
             <h1
-              className="text-4xl md:text-6xl font-pixel text-electric-teal neon-glow-teal glitch-text mb-6"
+              className="text-4xl md:text-6xl font-pixel text-white neon-glow-teal glitch-text mb-6"
               data-text="TOKEN STORE"
             >
               TOKEN STORE
@@ -126,7 +126,7 @@ export default function StorePage() {
               >
                 {pkg.popular && (
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-electric-teal text-retro-dark px-3 py-1 font-pixel text-xs">POPULAR</span>
+                    <span className="bg-electric-teal text-white px-3 py-1 font-pixel text-xs">POPULAR</span>
                   </div>
                 )}
 
@@ -137,7 +137,7 @@ export default function StorePage() {
                   transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
                   whileHover={{ rotateY: 720 }}
                 >
-                  <DollarSign className="w-8 h-8 text-retro-dark" />
+                  <DollarSign className="w-8 h-8 text-white" />
                 </motion.div>
 
                 <div className="font-pixel text-electric-teal text-lg mb-2">
@@ -152,7 +152,7 @@ export default function StorePage() {
                 <div className="font-pixel text-neon-pink text-xl mb-6">${pkg.price}</div>
 
                 <button
-                  className="retro-button bg-electric-teal text-retro-dark border-electric-teal w-full"
+                  className="retro-button bg-electric-teal text-white border-electric-teal w-full"
                   onClick={() => buyTokens(pkg.priceEnv, pkg.id)}
                   disabled={loadingId === pkg.id}
                 >
@@ -195,7 +195,7 @@ export default function StorePage() {
                 }`}
               >
                 <Zap className="w-4 h-4" />
-                <span>{isAdPlaying ? "PLAYING AD..." : "WATCH AD (50T)"}</span>
+                <span className="text-white">{isAdPlaying ? "PLAYING AD..." : "WATCH AD (50T)"}</span>
               </button>
 
               <button 

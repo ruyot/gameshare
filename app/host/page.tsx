@@ -76,7 +76,7 @@ export default function HostPage() {
             className="text-center mb-12"
           >
             <h1
-              className="text-4xl md:text-6xl font-pixel text-electric-teal neon-glow-teal glitch-text mb-6"
+              className="text-4xl md:text-6xl font-pixel text-white neon-glow-teal glitch-text mb-6"
               data-text="HOST TERMINAL"
             >
               HOST TERMINAL
@@ -106,7 +106,7 @@ export default function HostPage() {
             </div>
 
             <div className="crt-monitor p-4 text-center">
-              <div className="w-8 h-8 bg-neon-pink mx-auto mb-2 flex items-center justify-center font-pixel text-retro-dark text-xs">
+              <div className="w-8 h-8 bg-neon-pink mx-auto mb-2 flex items-center justify-center font-pixel text-white text-xs">
                 {stats.totalHours}
               </div>
               <div className="font-pixel text-neon-pink text-lg mb-1">{stats.totalHours}</div>
@@ -114,7 +114,7 @@ export default function HostPage() {
             </div>
 
             <div className="crt-monitor p-4 text-center">
-              <div className="w-8 h-8 bg-electric-teal mx-auto mb-2 flex items-center justify-center font-pixel text-retro-dark text-xs">
+              <div className="w-8 h-8 bg-electric-teal mx-auto mb-2 flex items-center justify-center font-pixel text-white text-xs">
                 ★
               </div>
               <div className="font-pixel text-electric-teal text-lg mb-1">{stats.avgRating}</div>
@@ -173,7 +173,7 @@ export default function HostPage() {
             >
               <button
                 onClick={() => router.push('/host/create')}
-                className="bg-neon-pink text-retro-dark font-pixel text-sm px-8 py-4 border-2 border-electric-teal hover:bg-electric-teal hover:text-retro-dark transition-all duration-300 flex items-center space-x-3 mx-auto"
+                className="bg-neon-pink text-white font-pixel text-sm px-8 py-4 border-2 border-electric-teal hover:bg-electric-teal hover:text-retro-dark transition-all duration-300 flex items-center space-x-3 mx-auto"
               >
                 <Plus className="w-5 h-5" />
                 <span>CREATE NEW LISTING</span>
