@@ -7,6 +7,7 @@ import { motion } from "framer-motion"
 import { ArrowLeft, Upload, Gamepad2, DollarSign, Star, Tag, Clock, FileText } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { ParticleField } from "@/components/ui/particle-field"
 
 export default function CreateListingPage() {
   const router = useRouter()
@@ -60,7 +61,10 @@ export default function CreateListingPage() {
   }
 
   return (
-    <div className="min-h-screen pt-16">
+    <div className="min-h-screen pt-16 relative overflow-hidden bg-retro-dark">
+      {/* Particle Field Background */}
+      <ParticleField />
+
       {/* Hero Section */}
       <section className="relative py-16 neon-grid">
         <div className="max-w-4xl mx-auto px-4">

@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
 import { DollarSign, Play, Trophy, Star, Zap, Gift, Target, Users, Clock, TrendingUp } from "lucide-react"
 import { RetroCarousel } from "@/components/retro-carousel"
+import { ParticleField } from "@/components/ui/particle-field"
 
 const tokenPackages = [
   { id: 1, tokens: 1000, price: 10, bonus: 0, popular: false, priceEnv: 'NEXT_PUBLIC_PRICE_1000_TOKENS' },
@@ -75,7 +76,10 @@ export default function StorePage() {
   }
 
   return (
-    <div className="min-h-screen pt-16">
+    <div className="min-h-screen pt-16 relative overflow-hidden bg-retro-dark">
+      {/* Particle Field Background */}
+      <ParticleField />
+
       {/* Hero Section */}
       <section className="py-16 neon-grid">
         <div className="max-w-7xl mx-auto px-4 text-center">

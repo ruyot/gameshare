@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
+import { ParticleField } from "@/components/ui/particle-field"
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || '',
@@ -49,8 +50,9 @@ export default function AuthCompleteInner() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-retro-dark">
-        <div className="text-center">
+      <div className="min-h-screen flex items-center justify-center bg-retro-dark relative overflow-hidden">
+        <ParticleField />
+        <div className="text-center relative z-10">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-neon-pink mx-auto mb-4"></div>
           <p className="font-pixel text-neon-pink">COMPLETING STEAM AUTHENTICATION...</p>
         </div>
@@ -60,8 +62,9 @@ export default function AuthCompleteInner() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-retro-dark">
-        <div className="text-center">
+      <div className="min-h-screen flex items-center justify-center bg-retro-dark relative overflow-hidden">
+        <ParticleField />
+        <div className="text-center relative z-10">
           <p className="font-pixel text-red-500 mb-4">AUTHENTICATION ERROR</p>
           <p className="font-pixel text-white mb-4">{error}</p>
           <button 

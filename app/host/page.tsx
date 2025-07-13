@@ -7,6 +7,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { HostGameCard } from "@/components/ui/host-game-card"
 import type { HostListing } from "@/components/ui/host-game-card"
+import { ParticleField } from "@/components/ui/particle-field"
 
 
 const hostListings: HostListing[] = [
@@ -61,7 +62,10 @@ export default function HostPage() {
   const router = useRouter()
 
   return (
-    <div className="min-h-screen pt-16">
+    <div className="min-h-screen pt-16 relative overflow-hidden bg-retro-dark">
+      {/* Particle Field Background */}
+      <ParticleField />
+
       {/* Hero Section */}
       <section className="relative py-16 neon-grid">
         <div className="max-w-7xl mx-auto px-4">

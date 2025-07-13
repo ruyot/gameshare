@@ -4,6 +4,7 @@ import { useState } from "react"
 import { motion } from "framer-motion"
 import { Search, Filter } from "lucide-react"
 import { RetroGameCard } from "@/components/retro-game-card"
+import { ParticleField } from "@/components/ui/particle-field"
 
 const games = [
   {
@@ -82,7 +83,10 @@ export default function MarketplacePage() {
   })
 
   return (
-    <div className="min-h-screen pt-16">
+    <div className="min-h-screen pt-16 relative overflow-hidden bg-retro-dark">
+      {/* Particle Field Background */}
+      <ParticleField />
+
       {/* Hero Section */}
       <section className="relative py-16 neon-grid">
         <div className="max-w-7xl mx-auto px-4">

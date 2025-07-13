@@ -5,6 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { ChevronDown, ChevronUp, HelpCircle } from "lucide-react"
+import { ParticleField } from "@/components/ui/particle-field"
 
 const faqs = [
   {
@@ -77,7 +78,10 @@ export default function SupportPage() {
   }
 
   return (
-    <div className="min-h-screen pt-16">
+    <div className="min-h-screen pt-16 relative overflow-hidden bg-retro-dark">
+      {/* Particle Field Background */}
+      <ParticleField />
+
       {/* Hero Section */}
       <section className="py-16 neon-grid">
         <div className="max-w-7xl mx-auto px-4 text-center">
