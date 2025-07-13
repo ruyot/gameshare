@@ -20,21 +20,15 @@ export function Navigation() {
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/marketplace" className="flex items-center space-x-2">
+          <Link href="/marketplace" className="flex items-center space-x-2 select-none">
             <span className="relative inline-block">
               {/* Neon Glow Layer */}
               <span
-                className="text-3xl md:text-4xl font-pixel neon-glow-pink glitch-text select-none"
                 aria-hidden="true"
+                className="text-3xl md:text-4xl font-pixel absolute inset-0 z-0 pointer-events-none"
                 style={{
                   color: '#ff5c8d',
                   filter: 'blur(2.5px)',
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  zIndex: 0,
-                  pointerEvents: 'none',
                   fontWeight: 'bold',
                   letterSpacing: '0.1em',
                 }}
@@ -43,11 +37,8 @@ export function Navigation() {
               </span>
               {/* Solid White Text Layer */}
               <span
-                className="text-3xl md:text-4xl font-pixel neon-glow-pink glitch-text"
+                className="text-3xl md:text-4xl font-pixel text-white relative z-10"
                 style={{
-                  color: '#fff',
-                  position: 'relative',
-                  zIndex: 1,
                   fontWeight: 'bold',
                   letterSpacing: '0.1em',
                 }}
