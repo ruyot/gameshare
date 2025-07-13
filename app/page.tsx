@@ -87,7 +87,7 @@ export default function HomePage() {
             className="mb-8"
           >
             <h1
-              className="text-6xl md:text-9xl font-pixel text-neon-pink neon-glow-pink glitch-text mb-4"
+              className="text-6xl md:text-9xl font-pixel text-white neon-glow-pink glitch-text mb-4"
               data-text="GAMESHARE"
               style={{
                 textShadow: "0 0 10px #ff5c8d, 0 0 20px #ff5c8d, 0 0 30px #ff5c8d, 4px 4px 0px #000000",
@@ -108,7 +108,7 @@ export default function HomePage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 1, delay: 1.5 }}
-              className="text-xl md:text-3xl font-pixel text-electric-teal neon-glow-teal"
+              className="text-xl md:text-3xl font-pixel text-white neon-glow-teal"
             >
               THE AIRBNB FOR GAMING PCs
             </motion.p>
@@ -143,7 +143,7 @@ export default function HomePage() {
 
                 <span className="relative z-10 flex items-center space-x-3">
                   <Play className="w-6 h-6" />
-                  <span>ENTER THE ARCADE</span>
+                  <span className="text-white">ENTER THE ARCADE</span>
                   <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
                 </span>
               </motion.button>
@@ -172,7 +172,7 @@ export default function HomePage() {
                 className="text-center crt-monitor p-6"
               >
                 <motion.div
-                  className="text-4xl md:text-6xl font-pixel text-neon-pink neon-glow-pink mb-2"
+                  className="text-4xl md:text-6xl font-pixel text-white neon-glow-pink mb-2"
                   whileHover={{ scale: 1.1 }}
                 >
                   {stat.number}
@@ -194,7 +194,7 @@ export default function HomePage() {
             transition={{ duration: 0.8 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-4xl md:text-6xl font-pixel text-electric-teal neon-glow-teal mb-8">THE PROBLEM</h2>
+            <h2 className="text-4xl md:text-6xl font-pixel text-white neon-glow-teal mb-8">THE PROBLEM</h2>
 
             <div className="grid md:grid-cols-2 gap-12 items-center">
               <motion.div
@@ -250,7 +250,7 @@ export default function HomePage() {
             transition={{ duration: 0.8 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-4xl md:text-6xl font-pixel text-neon-pink neon-glow-pink mb-12">OUR SOLUTION</h2>
+            <h2 className="text-4xl md:text-6xl font-pixel text-white neon-glow-pink mb-12">THE SOLUTION</h2>
 
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
@@ -307,7 +307,7 @@ export default function HomePage() {
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <h2 className="text-4xl md:text-6xl font-pixel text-electric-teal neon-glow-teal mb-8">HOW IT WORKS</h2>
+            <h2 className="text-4xl md:text-6xl font-pixel text-white neon-glow-teal mb-8">HOW IT WORKS</h2>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-8">
@@ -374,12 +374,12 @@ export default function HomePage() {
             transition={{ duration: 0.8 }}
             viewport={{ once: true }}
           >
-            <h3 className="font-pixel text-neon-pink text-2xl mb-4 neon-glow-pink">READY TO REVOLUTIONIZE GAMING?</h3>
+            <h3 className="font-pixel text-white text-2xl mb-4 neon-glow-pink">READY TO REVOLUTIONIZE GAMING?</h3>
             <p className="font-pixel text-electric-teal text-sm mb-8">JOIN THE FUTURE OF GAMING TODAY</p>
 
             <Link href="/marketplace">
               <motion.button
-                className="bg-electric-teal text-retro-dark font-pixel text-lg px-8 py-4 hover:bg-neon-pink transition-colors duration-300"
+                className="bg-electric-teal text-white font-pixel text-lg px-8 py-4 hover:bg-neon-pink transition-colors duration-300"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -388,7 +388,7 @@ export default function HomePage() {
             </Link>
 
             <div className="mt-12 pt-8 border-t border-gray-700">
-              <p className="font-pixel text-gray-500 text-xs">© 2024 GAMESHARE - THE AIRBNB FOR GAMING PCs</p>
+              <p className="font-pixel text-gray-500 text-xs">© 2025 GAMESHARE - THE AIRBNB FOR GAMING</p>
             </div>
           </motion.div>
         </div>
