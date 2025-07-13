@@ -25,6 +25,7 @@ export function Navigation() {
               className="text-3xl md:text-4xl font-pixel text-white neon-glow-pink glitch-text mb-0 mx-auto"
               data-text="GAME SHARE"
               style={{
+                color: '#fff', // force solid white text
                 textShadow: "0 0 10px #ff5c8d, 0 0 20px #ff5c8d, 0 0 30px #ff5c8d, 4px 4px 0px #000000",
                 fontWeight: "bold",
                 letterSpacing: "0.1em"
