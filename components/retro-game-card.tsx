@@ -3,6 +3,8 @@
 import { useState } from "react"
 import { motion } from "framer-motion"
 import Image from "next/image"
+import { useRouter } from 'next/navigation'
+import { createClient } from '@supabase/supabase-js'
 
 interface RetroGame {
   id: number
@@ -21,6 +23,20 @@ interface RetroGameCardProps {
 
 export function RetroGameCard({ game }: RetroGameCardProps) {
   const [isHovered, setIsHovered] = useState(false)
+  const router = useRouter()
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+
+  async function handleProtectedClick(path: string) {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      router.push('/api/auth/steam-login')
+    } else {
+      router.push(path)
+    }
+  }
 
   return (
     <motion.div
@@ -73,6 +89,7 @@ export function RetroGameCard({ game }: RetroGameCardProps) {
                 opacity: isHovered ? 1 : 0,
               }}
               transition={{ duration: 0.3, delay: 0.1 }}
+              onClick={() => handleProtectedClick(`/play/${game.id}`)}
             >
               {game.isHosting ? "CONTINUE" : "PLAY NOW"}
             </motion.button>
@@ -85,6 +102,7 @@ export function RetroGameCard({ game }: RetroGameCardProps) {
                 opacity: isHovered ? 1 : 0,
               }}
               transition={{ duration: 0.3, delay: 0.2 }}
+              onClick={() => handleProtectedClick(`/host/${game.id}`)}
             >
               HOST GAME
             </motion.button>

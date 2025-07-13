@@ -1,21 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
+import openid from 'openid'
+
+const STEAM_OPENID_URL = 'https://steamcommunity.com/openid'
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
-  const returnUrl = searchParams.get('returnUrl') || '/marketplace'
-  
-  // Steam OpenID login URL
-  const steamLoginUrl = new URL('https://steamcommunity.com/openid/login')
-  steamLoginUrl.searchParams.set('openid.ns', 'http://specs.openid.net/auth/2.0')
-  steamLoginUrl.searchParams.set('openid.mode', 'checkid_setup')
-  
-  // Get site URL at runtime
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
-  
-  steamLoginUrl.searchParams.set('openid.return_to', `${siteUrl}/api/auth/steam-callback?returnUrl=${encodeURIComponent(returnUrl)}`)
-  steamLoginUrl.searchParams.set('openid.realm', siteUrl)
-  steamLoginUrl.searchParams.set('openid.identity', 'http://specs.openid.net/auth/2.0/identifier_select')
-  steamLoginUrl.searchParams.set('openid.claimed_id', 'http://specs.openid.net/auth/2.0/identifier_select')
+  try {
+    const relyingParty = new openid.RelyingParty(
+      `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/steam-callback`,
+      null,
+      true,
+      true,
+      []
+    )
 
-  return NextResponse.redirect(steamLoginUrl.toString())
+    const authUrl = await new Promise<string>((resolve, reject) => {
+      relyingParty.authenticate(STEAM_OPENID_URL, false, (error, authUrl) => {
+        if (error) {
+          reject(error)
+        } else {
+          resolve(authUrl!)
+        }
+      })
+    })
+
+    return NextResponse.redirect(authUrl)
+  } catch (error) {
+    console.error('Steam login error:', error)
+    return NextResponse.redirect('/auth?error=steam_login_failed')
+  }
 } 
