@@ -11,7 +11,6 @@ const nextConfig = {
   },
   // Optimize build performance
   experimental: {
-    optimizeCss: true,
     optimizePackageImports: ['lucide-react', 'framer-motion'],
   },
   // Reduce bundle size
