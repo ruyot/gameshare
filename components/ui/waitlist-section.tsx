@@ -42,7 +42,7 @@ export function WaitlistSection() {
             <Bell className="w-16 h-16 text-electric-teal mx-auto neon-glow-teal" />
           </motion.div>
 
-          <h2 className="text-4xl md:text-6xl font-pixel text-neon-pink neon-glow-pink mb-8">WANT ALL THE UPDATES?</h2>
+          <h2 className="text-4xl md:text-6xl font-pixel text-white neon-glow-pink mb-8">WANT ALL THE UPDATES?</h2>
 
           <p className="font-pixel text-electric-teal text-lg mb-12">JOIN THE WAITLIST FOR EXCLUSIVE ACCESS</p>
 
@@ -78,7 +78,7 @@ export function WaitlistSection() {
                 >
                   <span className="flex items-center justify-center space-x-2">
                     <Zap className="w-5 h-5" />
-                    <span>JOIN THE REVOLUTION</span>
+                    <span className="text-white">JOIN THE REVOLUTION</span>
                   </span>
                 </motion.button>
               </form>
