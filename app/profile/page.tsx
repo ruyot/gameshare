@@ -145,7 +145,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen pt-16 neon-grid relative overflow-hidden bg-retro-dark">
       {/* Particle Field Background */}
-      <ParticleField />
+      {/* <ParticleField /> */}
 
       <div className="max-w-7xl mx-auto px-4 py-8 relative z-10">
         <motion.div

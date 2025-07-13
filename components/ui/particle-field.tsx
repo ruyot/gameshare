@@ -42,8 +42,8 @@ export function ParticleField() {
 
       // Random angle for outward direction
       const angle = Math.random() * Math.PI * 2
-      // Increase speed for longer streaks
-      const speed = Math.random() * 1.2 + 0.8 // was 0.8 + 0.4
+      // Keep the longer streaks
+      const speed = Math.random() * 1.2 + 0.8
 
       particles.push({
         x: centerX, // Start exactly at center
@@ -53,39 +53,31 @@ export function ParticleField() {
         size: Math.random() * 2 + 0.5, // Smaller particles
         color: colors[Math.floor(Math.random() * colors.length)],
         life: 0,
-        maxLife: Math.random() * 800 + 700, // was 400 + 300, now much longer
+        maxLife: Math.random() * 800 + 700, // Longer life for edge streaks
         speed: speed,
         startDistance: 0,
       })
     }
 
-    // Create fewer initial particles
     for (let i = 0; i < 80; i++) {
       createParticle()
     }
 
     const animate = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
       ctx.fillStyle = "rgba(10, 15, 16, 0.12)"
       ctx.fillRect(0, 0, canvas.width, canvas.height)
 
       const centerX = canvas.width / 2
       const centerY = canvas.height / 2
 
-      // Update and draw particles
       for (let i = particles.length - 1; i >= 0; i--) {
         const particle = particles[i]
-
-        // Move particle outward
         particle.x += particle.vx
         particle.y += particle.vy
         particle.life++
 
-        // Calculate distance from center
         const distanceFromCenter = Math.sqrt(Math.pow(particle.x - centerX, 2) + Math.pow(particle.y - centerY, 2))
-
-        // Remove particles only when they're well beyond screen edges or too old
-        const buffer = 400 // Extra buffer to ensure they reach the very edges
+        const buffer = 400
         if (
           particle.x < -buffer ||
           particle.x > canvas.width + buffer ||
@@ -94,7 +86,7 @@ export function ParticleField() {
           particle.life >= particle.maxLife
         ) {
           particles.splice(i, 1)
-          createParticle() // Create new particle at center
+          createParticle()
           continue
         }
 
@@ -102,20 +94,21 @@ export function ParticleField() {
         const minVisibleDistance = 80
         if (distanceFromCenter < minVisibleDistance) continue
 
-        // Draw streak
+        // Draw hyperspace streak effect with gradient
         ctx.save()
-        ctx.globalAlpha = 0.7
-        ctx.beginPath()
-        ctx.moveTo(particle.x, particle.y)
-        // Draw streak backwards
-        ctx.lineTo(
-          particle.x - particle.vx * 30,
-          particle.y - particle.vy * 30
-        )
-        ctx.strokeStyle = particle.color
+        const streakLength = Math.min(distanceFromCenter * 0.3, 60)
+        const streakStartX = particle.x - particle.vx * streakLength
+        const streakStartY = particle.y - particle.vy * streakLength
+        const gradient = ctx.createLinearGradient(streakStartX, streakStartY, particle.x, particle.y)
+        gradient.addColorStop(0, particle.color + "00") // Transparent start
+        gradient.addColorStop(0.7, particle.color + "80") // Semi-transparent middle
+        gradient.addColorStop(1, particle.color + "FF") // Full opacity end
+        ctx.strokeStyle = gradient
         ctx.lineWidth = particle.size
-        ctx.shadowColor = particle.color
-        ctx.shadowBlur = 12
+        ctx.lineCap = "round"
+        ctx.beginPath()
+        ctx.moveTo(streakStartX, streakStartY)
+        ctx.lineTo(particle.x, particle.y)
         ctx.stroke()
         ctx.restore()
 
@@ -141,7 +134,6 @@ export function ParticleField() {
     }
   }, [])
 
-  // Absolutely position the canvas behind all content
   return (
     <canvas
       ref={canvasRef}
