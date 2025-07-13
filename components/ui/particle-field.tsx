@@ -58,8 +58,8 @@ export function ParticleField() {
       })
     }
 
-    // Create fewer initial particles
-    for (let i = 0; i < 80; i++) {
+    // Create fewer initial particles for better performance
+    for (let i = 0; i < 40; i++) {
       createParticle()
     }
 

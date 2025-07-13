@@ -99,13 +99,13 @@ export function ConsoleEvolution() {
       setCurrentConsole((prev) => (prev + 1) % consoles.length)
     }, 3000)
 
-    // Generate particles
+    // Generate fewer particles for better performance
     const newParticles = Array.from({ length: 50 }, (_, i) => ({
       id: i,
-      x: Math.random() * window.innerWidth,
-      y: Math.random() * window.innerHeight,
-      vx: (Math.random() - 0.5) * 2,
-      vy: (Math.random() - 0.5) * 2,
+      x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1200),
+      y: Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 800),
+      vx: (Math.random() - 0.5) * 1,
+      vy: (Math.random() - 0.5) * 1,
     }))
     setParticles(newParticles)
 
