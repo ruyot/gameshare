@@ -4,30 +4,34 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { motion } from "framer-motion"
+import { useAuth } from "@/hooks/use-auth"
+import { initiateSteamLogin } from "@/lib/steam-auth"
 
 export function RetroNavigation() {
   const pathname = usePathname()
+  const { user, loading, isAuthenticated, signOut } = useAuth()
   const [tokenCount, setTokenCount] = useState(0)
 
   useEffect(() => {
-    // Animate token counter on load
-    const target = 2450
-    const duration = 2000
-    const increment = target / (duration / 16)
-    let current = 0
+    if (user) {
+      // Fetch real token balance from API
+      fetchUserTokens()
+    } else {
+      setTokenCount(0)
+    }
+  }, [user])
 
-    const timer = setInterval(() => {
-      current += increment
-      if (current >= target) {
-        setTokenCount(target)
-        clearInterval(timer)
-      } else {
-        setTokenCount(Math.floor(current))
+  const fetchUserTokens = async () => {
+    try {
+      const response = await fetch('/api/user/profile')
+      if (response.ok) {
+        const data = await response.json()
+        setTokenCount(data.tokensBalance || 0)
       }
-    }, 16)
-
-    return () => clearInterval(timer)
-  }, [])
+    } catch (error) {
+      console.error('Error fetching user tokens:', error)
+    }
+  }
 
   const navItems = [
     { href: "/marketplace", label: "ARCADE" },
@@ -36,6 +40,14 @@ export function RetroNavigation() {
     { href: "/store", label: "TOKENS" },
     { href: "/support", label: "HELP" },
   ]
+
+  const handleLogin = () => {
+    initiateSteamLogin()
+  }
+
+  const handleLogout = async () => {
+    await signOut()
+  }
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-retro-dark border-b-2 border-neon-pink">
@@ -83,20 +95,39 @@ export function RetroNavigation() {
             ))}
           </div>
 
-          {/* Token Counter */}
+          {/* Token Counter & Auth */}
           <div className="flex items-center space-x-4">
-            <div className="led-counter font-pixel text-xs">{tokenCount.toLocaleString().padStart(6, "0")}</div>
-            <div className="w-8 h-8 bg-neon-pink border-2 border-electric-teal pixel-border flex items-center justify-center">
-              <span
-                className="text-retro-dark font-pixel text-xs font-bold"
-                style={{
-                  textShadow: "1px 1px 0px #000000",
-                  fontWeight: "900",
-                }}
+            {loading ? (
+              <div className="font-pixel text-electric-teal text-xs animate-pulse">LOADING...</div>
+            ) : isAuthenticated ? (
+              <>
+                <div className="led-counter font-pixel text-xs">{tokenCount.toLocaleString().padStart(6, "0")}</div>
+                <div className="w-8 h-8 bg-neon-pink border-2 border-electric-teal pixel-border flex items-center justify-center">
+                  <span
+                    className="text-retro-dark font-pixel text-xs font-bold"
+                    style={{
+                      textShadow: "1px 1px 0px #000000",
+                      fontWeight: "900",
+                    }}
+                  >
+                    {user?.user_metadata?.steamId ? `S${user.user_metadata.steamId.slice(-4)}` : 'P1'}
+                  </span>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="font-pixel text-xs text-white hover:text-neon-pink transition-colors duration-200"
+                >
+                  LOGOUT
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={handleLogin}
+                className="font-pixel text-xs bg-neon-pink text-retro-dark px-4 py-2 border-2 border-electric-teal hover:bg-electric-teal hover:text-retro-dark transition-all duration-200"
               >
-                P1
-              </span>
-            </div>
+                LOGIN
+              </button>
+            )}
           </div>
         </div>
       </div>

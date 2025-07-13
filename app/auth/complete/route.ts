@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
@@ -21,33 +20,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const cookieStore = await cookies()
-    
-    // Create server-side Supabase client
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
-              )
-            } catch {
-              // The `setAll` method was called from a Server Component.
-              // This can be ignored if you have middleware refreshing
-              // user sessions.
-            }
-          },
-        },
-      }
-    )
+    // Create response and middleware client (same as middleware.ts)
+    const res = NextResponse.redirect(`${process.env.NEXT_PUBLIC_SITE_URL}${returnUrl}`)
+    const supabase = createMiddlewareClient({ req: request, res })
 
-    // Set the session server-side
+    // Set the session using the middleware client
     const { error: sessionError } = await supabase.auth.setSession({
       access_token,
       refresh_token
@@ -68,8 +45,8 @@ export async function GET(request: NextRequest) {
 
     console.log('Auth completion successful for user:', user.id)
 
-    // Redirect to marketplace or stored destination
-    return NextResponse.redirect(returnUrl)
+    // Return the response with the session cookies set
+    return res
 
   } catch (error) {
     console.error('Auth completion server error:', error)
