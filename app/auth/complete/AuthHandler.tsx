@@ -18,7 +18,16 @@ export default function AuthHandler() {
       )
       supabase.auth
         .setSession({ access_token, refresh_token })
-        .then(() => router.replace('/marketplace'))
+        .then(() => {
+          // Check for stored redirect destination
+          const redirectTo = localStorage.getItem('authRedirect')
+          if (redirectTo) {
+            localStorage.removeItem('authRedirect')
+            router.replace(redirectTo)
+          } else {
+            router.replace('/marketplace')
+          }
+        })
         .catch((error) => {
           console.error('Session error:', error)
           router.replace('/auth?error=session_error')

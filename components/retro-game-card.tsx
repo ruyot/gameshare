@@ -3,6 +3,8 @@
 import { useState } from "react"
 import { motion } from "framer-motion"
 import Image from "next/image"
+import { AuthButton } from "@/components/ui/auth-button"
+import { BookingModal } from "@/components/ui/booking-modal"
 
 interface RetroGame {
   id: number
@@ -21,6 +23,11 @@ interface RetroGameCardProps {
 
 export function RetroGameCard({ game }: RetroGameCardProps) {
   const [isHovered, setIsHovered] = useState(false)
+  const [showBookingModal, setShowBookingModal] = useState(false)
+
+  const handlePlayNow = () => {
+    setShowBookingModal(true)
+  }
 
   return (
     <motion.div
@@ -65,8 +72,7 @@ export function RetroGameCard({ game }: RetroGameCardProps) {
             animate={{ opacity: isHovered ? 1 : 0 }}
             transition={{ duration: 0.3 }}
           >
-            <motion.button
-              className="retro-button bg-neon-pink text-retro-dark border-neon-pink"
+            <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{
                 y: isHovered ? 0 : 20,
@@ -74,8 +80,14 @@ export function RetroGameCard({ game }: RetroGameCardProps) {
               }}
               transition={{ duration: 0.3, delay: 0.1 }}
             >
-              {game.isHosting ? "CONTINUE" : "PLAY NOW"}
-            </motion.button>
+              <AuthButton
+                onClick={handlePlayNow}
+                className="retro-button bg-neon-pink text-retro-dark border-neon-pink"
+                redirectTo="/marketplace"
+              >
+                {game.isHosting ? "CONTINUE" : "PLAY NOW"}
+              </AuthButton>
+            </motion.div>
           </motion.div>
         </div>
 
@@ -111,6 +123,13 @@ export function RetroGameCard({ game }: RetroGameCardProps) {
           transition={{ duration: 0.3 }}
         />
       </div>
+
+      {/* Booking Modal */}
+      <BookingModal
+        isOpen={showBookingModal}
+        onClose={() => setShowBookingModal(false)}
+        game={game}
+      />
     </motion.div>
   )
 }

@@ -1,8 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { User, TrendingUp, Clock, Zap } from "lucide-react"
+import { useAuth } from "@/hooks/use-auth"
+import { AuthGuard } from "@/components/ui/auth-guard"
 
 const profileData = {
   username: "PLAYER_ONE",
@@ -49,12 +51,80 @@ const myListings = [
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState("rentings")
+  const [userData, setUserData] = useState<any>(null)
+  const [userSessions, setUserSessions] = useState<any[]>([])
+  const [userListings, setUserListings] = useState<any[]>([])
+  const { user, loading } = useAuth()
 
   const tabs = [
     { id: "rentings", label: "RENTINGS" },
     { id: "listings", label: "LISTINGS" },
     { id: "earnings", label: "EARNINGS" },
   ]
+
+  useEffect(() => {
+    if (user) {
+      // Fetch user data
+      fetchUserData()
+      fetchUserSessions()
+      fetchUserListings()
+    }
+  }, [user])
+
+  const fetchUserData = async () => {
+    try {
+      const response = await fetch(`/api/user/profile`)
+      if (response.ok) {
+        const data = await response.json()
+        setUserData(data)
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error)
+    }
+  }
+
+  const fetchUserSessions = async () => {
+    try {
+      const response = await fetch(`/api/user/sessions`)
+      if (response.ok) {
+        const data = await response.json()
+        setUserSessions(data.sessions || [])
+      }
+    } catch (error) {
+      console.error('Error fetching user sessions:', error)
+    }
+  }
+
+  const fetchUserListings = async () => {
+    try {
+      const response = await fetch(`/api/user/listings`)
+      if (response.ok) {
+        const data = await response.json()
+        setUserListings(data.listings || [])
+      }
+    } catch (error) {
+      console.error('Error fetching user listings:', error)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen pt-16 flex items-center justify-center">
+        <div className="font-pixel text-electric-teal text-sm animate-pulse">LOADING PLAYER DATA...</div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen pt-16 flex items-center justify-center">
+        <div className="text-center">
+          <div className="font-pixel text-neon-pink text-lg mb-4">AUTHENTICATION REQUIRED</div>
+          <div className="font-pixel text-white text-sm">Please log in to view your profile</div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen pt-16 neon-grid">
@@ -77,22 +147,26 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                <h2 className="font-pixel text-electric-teal text-sm mb-2 neon-glow-teal">{profileData.username}</h2>
+                <h2 className="font-pixel text-electric-teal text-sm mb-2 neon-glow-teal">
+                  {userData?.steamId ? `STEAM_${userData.steamId.slice(-6)}` : 'PLAYER'}
+                </h2>
 
-                <div className="led-counter inline-block">{profileData.tokenBalance.toLocaleString()} TOKENS</div>
+                <div className="led-counter inline-block">
+                  {(userData?.tokensBalance || 0).toLocaleString()} TOKENS
+                </div>
               </div>
 
               {/* Stats */}
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="bg-retro-dark border border-neon-pink p-3 text-center">
                   <TrendingUp className="w-6 h-6 text-neon-pink mx-auto mb-2" />
-                  <div className="font-pixel text-neon-pink text-xs">{profileData.totalEarnings}</div>
+                  <div className="font-pixel text-neon-pink text-xs">{userData?.totalEarnings || 0}</div>
                   <div className="font-pixel text-white text-xs">EARNED</div>
                 </div>
 
                 <div className="bg-retro-dark border border-electric-teal p-3 text-center">
                   <Clock className="w-6 h-6 text-electric-teal mx-auto mb-2" />
-                  <div className="font-pixel text-electric-teal text-xs">{profileData.hoursPlayed}</div>
+                  <div className="font-pixel text-electric-teal text-xs">{userData?.totalHours || 0}</div>
                   <div className="font-pixel text-white text-xs">HOURS</div>
                 </div>
               </div>
@@ -134,67 +208,81 @@ export default function ProfilePage() {
 
               {activeTab === "rentings" && (
                 <div className="space-y-4">
-                  {myRentings.map((rental, index) => (
-                    <motion.div
-                      key={rental.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="bg-retro-dark border border-electric-teal p-4 flex items-center justify-between"
-                    >
-                      <div>
-                        <div className="font-pixel text-white text-xs mb-1">{rental.title}</div>
-                        <div className="font-pixel text-electric-teal text-xs">
-                          {rental.status === "ACTIVE" ? `TIME: ${rental.timeRemaining}` : rental.timeRemaining}
+                  {userSessions.length === 0 ? (
+                    <div className="text-center py-8">
+                      <div className="font-pixel text-electric-teal text-sm mb-2">NO SESSIONS FOUND</div>
+                      <div className="font-pixel text-white text-xs">Start playing games to see your sessions here</div>
+                    </div>
+                  ) : (
+                    userSessions.map((session, index) => (
+                      <motion.div
+                        key={session.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        className="bg-retro-dark border border-electric-teal p-4 flex items-center justify-between"
+                      >
+                        <div>
+                          <div className="font-pixel text-white text-xs mb-1">{session.gameTitle}</div>
+                          <div className="font-pixel text-electric-teal text-xs">
+                            {session.isHost ? 'HOSTING' : 'PLAYING'} • {session.hours}H
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="text-right">
-                        <div className="font-pixel text-neon-pink text-xs mb-1">{rental.tokensSpent}T</div>
-                        <div
-                          className={`font-pixel text-xs px-2 py-1 ${
-                            rental.status === "ACTIVE"
-                              ? "bg-electric-teal text-retro-dark"
-                              : "bg-neon-pink text-retro-dark"
-                          }`}
-                        >
-                          {rental.status}
+                        <div className="text-right">
+                          <div className="font-pixel text-neon-pink text-xs mb-1">{session.totalCost}T</div>
+                          <div
+                            className={`font-pixel text-xs px-2 py-1 ${
+                              session.status === "active"
+                                ? "bg-electric-teal text-retro-dark"
+                                : "bg-neon-pink text-retro-dark"
+                            }`}
+                          >
+                            {session.status.toUpperCase()}
+                          </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  ))}
+                      </motion.div>
+                    ))
+                  )}
                 </div>
               )}
 
               {activeTab === "listings" && (
                 <div className="space-y-4">
-                  {myListings.map((listing, index) => (
-                    <motion.div
-                      key={listing.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="bg-retro-dark border border-neon-pink p-4 flex items-center justify-between"
-                    >
-                      <div>
-                        <div className="font-pixel text-white text-xs mb-1">{listing.title}</div>
-                        <div className="font-pixel text-neon-pink text-xs">{listing.rate}T/HOUR</div>
-                      </div>
-
-                      <div className="text-right">
-                        <div className="font-pixel text-electric-teal text-xs mb-1">{listing.totalEarned}T EARNED</div>
-                        <div
-                          className={`font-pixel text-xs px-2 py-1 ${
-                            listing.status === "AVAILABLE"
-                              ? "bg-neon-pink text-retro-dark"
-                              : "bg-electric-teal text-retro-dark animate-pulse"
-                          }`}
-                        >
-                          {listing.status}
+                  {userListings.length === 0 ? (
+                    <div className="text-center py-8">
+                      <div className="font-pixel text-neon-pink text-sm mb-2">NO LISTINGS FOUND</div>
+                      <div className="font-pixel text-white text-xs">Create listings to see them here</div>
+                    </div>
+                  ) : (
+                    userListings.map((listing, index) => (
+                      <motion.div
+                        key={listing.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        className="bg-retro-dark border border-neon-pink p-4 flex items-center justify-between"
+                      >
+                        <div>
+                          <div className="font-pixel text-white text-xs mb-1">{listing.gameTitle}</div>
+                          <div className="font-pixel text-neon-pink text-xs">{listing.rateTokensPerHour}T/HOUR</div>
                         </div>
-                      </div>
-                    </motion.div>
-                  ))}
+
+                        <div className="text-right">
+                          <div className="font-pixel text-electric-teal text-xs mb-1">MAX {listing.maxHours}H</div>
+                          <div
+                            className={`font-pixel text-xs px-2 py-1 ${
+                              listing.status === "active"
+                                ? "bg-neon-pink text-retro-dark"
+                                : "bg-electric-teal text-retro-dark"
+                            }`}
+                          >
+                            {listing.status.toUpperCase()}
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))
+                  )}
                 </div>
               )}
 
@@ -206,19 +294,19 @@ export default function ProfilePage() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-2xl mx-auto">
                     <div className="crt-monitor p-4">
                       <div className="font-pixel text-electric-teal text-lg mb-2">
-                        {profileData.totalEarnings.toLocaleString()}
+                        {(userData?.totalEarnings || 0).toLocaleString()}
                       </div>
                       <div className="font-pixel text-white text-xs">TOTAL EARNED</div>
                     </div>
 
                     <div className="crt-monitor p-4">
-                      <div className="font-pixel text-neon-pink text-lg mb-2">{profileData.gamesHosted}</div>
+                      <div className="font-pixel text-neon-pink text-lg mb-2">{userListings.length}</div>
                       <div className="font-pixel text-white text-xs">GAMES HOSTED</div>
                     </div>
 
                     <div className="crt-monitor p-4">
-                      <div className="font-pixel text-electric-teal text-lg mb-2">4.8</div>
-                      <div className="font-pixel text-white text-xs">AVG RATING</div>
+                      <div className="font-pixel text-electric-teal text-lg mb-2">{userData?.completedSessions || 0}</div>
+                      <div className="font-pixel text-white text-xs">SESSIONS</div>
                     </div>
                   </div>
                 </div>

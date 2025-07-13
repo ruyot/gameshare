@@ -4,6 +4,7 @@ import { Press_Start_2P } from "next/font/google"
 import "./globals.css"
 import { RetroNavigation } from "@/components/retro-navigation"
 import { StarfieldBackground } from "@/components/starfield-background"
+import { ToastProvider } from "@/components/ui/toast-provider"
 
 const pressStart2P = Press_Start_2P({
   weight: "400",
@@ -25,10 +26,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${pressStart2P.variable} font-pixel antialiased bg-retro-dark overflow-x-hidden`}>
-        <StarfieldBackground />
-        <div className="scanlines"></div>
-        <RetroNavigation />
-        <main className="relative z-10 min-h-screen">{children}</main>
+        <ToastProvider>
+          <StarfieldBackground />
+          <div className="scanlines"></div>
+          <RetroNavigation />
+          <main className="relative z-10 min-h-screen">{children}</main>
+        </ToastProvider>
       </body>
     </html>
   )
