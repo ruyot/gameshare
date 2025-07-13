@@ -1,5 +1,5 @@
 <div id="header" align="center">
-  <img src="https://i.imgur.com/y2SPx4E.jpg" width="800" height="400">
+  <img src="" width="800" height="400">
 </div>
 
 <div id="description" align="center">
@@ -8,9 +8,9 @@
 
 ### [CLICK TO DEMO](https://gamesharez.netlify.app/)
 
-##### Tahmeed Tariq
+##### Tahmeed T
 
-[![LinkedIn Badge](https://img.shields.io/badge/-@tahmeedtariq-blue?style=flat&logo=Linkedin&logoColor=black)](https://www.linkedin.com/in/tahmeedtariq/)
+[![LinkedIn Badge](https://img.shields.io/badge/-@tahmeedt-blue?style=flat&logo=Linkedin&logoColor=black)](https://www.linkedin.com/in/tahmeedt/)
 
 ## Description
 
