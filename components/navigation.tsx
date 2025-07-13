@@ -21,18 +21,40 @@ export function Navigation() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/marketplace" className="flex items-center space-x-2">
-            <h1
-              className="text-3xl md:text-4xl font-pixel text-white neon-glow-pink glitch-text mb-0 mx-auto"
-              data-text="GAME SHARE"
-              style={{
-                color: '#fff', // force solid white text
-                textShadow: "0 0 10px #ff5c8d, 0 0 20px #ff5c8d, 0 0 30px #ff5c8d, 4px 4px 0px #000000",
-                fontWeight: "bold",
-                letterSpacing: "0.1em"
-              }}
-            >
-              GAME SHARE
-            </h1>
+            <span className="relative inline-block">
+              {/* Neon Glow Layer */}
+              <span
+                className="text-3xl md:text-4xl font-pixel neon-glow-pink glitch-text select-none"
+                aria-hidden="true"
+                style={{
+                  color: '#ff5c8d',
+                  filter: 'blur(2.5px)',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  zIndex: 0,
+                  pointerEvents: 'none',
+                  fontWeight: 'bold',
+                  letterSpacing: '0.1em',
+                }}
+              >
+                GAME SHARE
+              </span>
+              {/* Solid White Text Layer */}
+              <span
+                className="text-3xl md:text-4xl font-pixel neon-glow-pink glitch-text"
+                style={{
+                  color: '#fff',
+                  position: 'relative',
+                  zIndex: 1,
+                  fontWeight: 'bold',
+                  letterSpacing: '0.1em',
+                }}
+              >
+                GAME SHARE
+              </span>
+            </span>
           </Link>
 
           {/* Navigation Links */}
