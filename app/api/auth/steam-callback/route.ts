@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     // 1) Verify Steam OpenID
     const url = request.url
     const rp = new openid.RelyingParty(
-      `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/steam-callback`,
+      'https://gamesharez.netlify.app/api/auth/steam-callback',
       null,
       true,
       true,
