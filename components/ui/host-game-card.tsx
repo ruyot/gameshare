@@ -4,7 +4,7 @@ import { useState } from "react"
 import Image from "next/image"
 import { motion } from "framer-motion"
 import { Clock, Star, TrendingUp, Settings, Pause, Play } from "lucide-react"
-import { AuthButton } from "@/components/ui/auth-button"
+
 
 export interface HostListing {
   id: number
@@ -108,13 +108,12 @@ export function HostGameCard({ listing }: HostGameCardProps) {
                 }}
                 transition={{ duration: 0.3, delay: 0.1 }}
               >
-                <AuthButton
+                <button
                   onClick={handlePauseResume}
                   className="retro-button bg-neon-pink text-retro-dark border-neon-pink p-2"
-                  redirectTo="/host"
                 >
                   {listing.status === "PAUSED" ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-                </AuthButton>
+                </button>
               </motion.div>
 
               <motion.div
@@ -125,13 +124,12 @@ export function HostGameCard({ listing }: HostGameCardProps) {
                 }}
                 transition={{ duration: 0.3, delay: 0.2 }}
               >
-                <AuthButton
+                <button
                   onClick={handleSettings}
                   className="retro-button bg-electric-teal text-retro-dark border-electric-teal p-2"
-                  redirectTo="/host"
                 >
                   <Settings className="w-4 h-4" />
-                </AuthButton>
+                </button>
               </motion.div>
             </div>
           </motion.div>

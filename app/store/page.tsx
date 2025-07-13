@@ -4,8 +4,7 @@ import { useState } from "react"
 import { motion } from "framer-motion"
 import { Coins, Zap, Gift } from "lucide-react"
 import { RetroCarousel } from "@/components/retro-carousel"
-import { useSession } from '@supabase/auth-helpers-react'
-import { AuthButton } from "@/components/ui/auth-button"
+import { useAuth } from "@/hooks/use-auth"
 
 const tokenPackages = [
   { id: 1, tokens: 1000, price: 10, bonus: 0, popular: false, priceEnv: 'NEXT_PUBLIC_PRICE_1000_TOKENS' },
@@ -38,7 +37,7 @@ const giftGames = [
 export default function StorePage() {
   const [isAdPlaying, setIsAdPlaying] = useState(false)
   const [loadingId, setLoadingId] = useState<number | null>(null)
-  const session = useSession()
+  const { session } = useAuth()
 
   const playAd = () => {
     setIsAdPlaying(true)
@@ -140,14 +139,13 @@ export default function StorePage() {
 
                 <div className="font-pixel text-neon-pink text-xl mb-6">${pkg.price}</div>
 
-                <AuthButton
+                <button
                   className="retro-button bg-electric-teal text-retro-dark border-electric-teal w-full"
                   onClick={() => buyTokens(pkg.priceEnv, pkg.id)}
                   disabled={loadingId === pkg.id}
-                  redirectTo="/store"
                 >
                   {loadingId === pkg.id ? 'Redirecting...' : 'PURCHASE'}
-                </AuthButton>
+                </button>
               </motion.div>
             ))}
           </div>
@@ -175,7 +173,7 @@ export default function StorePage() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <AuthButton
+              <button
                 onClick={playAd}
                 disabled={isAdPlaying}
                 className={`retro-button flex items-center space-x-2 ${
@@ -183,19 +181,17 @@ export default function StorePage() {
                     ? "bg-neon-pink text-retro-dark border-neon-pink animate-pulse"
                     : "bg-electric-teal text-retro-dark border-electric-teal"
                 }`}
-                redirectTo="/store"
               >
                 <Zap className="w-4 h-4" />
                 <span>{isAdPlaying ? "PLAYING AD..." : "WATCH AD (50T)"}</span>
-              </AuthButton>
+              </button>
 
-              <AuthButton 
+              <button 
                 onClick={() => console.log('View missions clicked')}
                 className="retro-button bg-transparent text-neon-pink border-neon-pink"
-                redirectTo="/store"
               >
                 VIEW MISSIONS
-              </AuthButton>
+              </button>
             </div>
 
             {isAdPlaying && (

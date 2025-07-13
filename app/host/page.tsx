@@ -6,7 +6,7 @@ import { Plus, Server, TrendingUp } from "lucide-react"
 import Link from "next/link"
 import { HostGameCard } from "@/components/ui/host-game-card"
 import type { HostListing } from "@/components/ui/host-game-card"
-import { AuthButton } from "@/components/ui/auth-button"
+
 
 const hostListings: HostListing[] = [
   {
@@ -165,14 +165,13 @@ export default function HostPage() {
               }}
               whileTap={{ scale: 0.95 }}
             >
-              <AuthButton
+              <button
                 onClick={() => window.location.href = '/host/create'}
                 className="bg-neon-pink text-retro-dark font-pixel text-sm px-8 py-4 border-2 border-electric-teal hover:bg-electric-teal hover:text-retro-dark transition-all duration-300 flex items-center space-x-3 mx-auto"
-                redirectTo="/host"
               >
                 <Plus className="w-5 h-5" />
                 <span>CREATE NEW LISTING</span>
-              </AuthButton>
+              </button>
             </motion.div>
 
             <p className="font-pixel text-electric-teal text-xs mt-4">EXPAND YOUR HOSTING NETWORK</p>
