@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     console.log('Verifying Steam OpenID for URL:', url)
     
     const rp = new openid.RelyingParty(
-      'https://gamesharez.netlify.app/api/auth/steam-callback',
+      `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/steam-callback`,
       null,
       true,
       true,
@@ -156,14 +156,51 @@ export async function GET(request: NextRequest) {
 
     console.log('Session tokens generated successfully')
 
-    // 6) Return a clean 302 redirect to /auth/complete with tokens
-    return new NextResponse(null, {
-      status: 302,
-      headers: {
-        Location: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/complete?access_token=${accessToken}&refresh_token=${refreshToken}`,
-        'Content-Type': 'text/html; charset=utf-8',
-      },
+    // 6) Fetch Steam profile data (optional enhancement)
+    try {
+      const steamProfileResponse = await fetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${process.env.STEAM_API_KEY}&steamids=${steamId}`)
+      if (steamProfileResponse.ok) {
+        const steamData = await steamProfileResponse.json()
+        const steamProfile = steamData.response.players[0]
+        
+        // Update user with Steam profile data
+        await supabaseAdmin
+          .from('User')
+          .update({
+            steamUsername: steamProfile.personaname,
+            steamAvatar: steamProfile.avatarfull,
+            updatedAt: new Date().toISOString()
+          })
+          .eq('id', user.id)
+      }
+    } catch (profileError) {
+      console.error('Steam profile fetch error:', profileError)
+      // Continue anyway - this is optional
+    }
+
+    // 7) Set session cookies server-side and redirect
+    const response = NextResponse.redirect(`${process.env.NEXT_PUBLIC_SITE_URL}/auth/complete?access_token=${accessToken}&refresh_token=${refreshToken}`)
+    
+    // Set secure session cookies with hardened settings
+    response.cookies.set('sb-access-token', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: '/',
+      domain: process.env.NODE_ENV === 'production' ? process.env.COOKIE_DOMAIN : undefined
     })
+    
+    response.cookies.set('sb-refresh-token', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 60 * 60 * 24 * 30, // 30 days
+      path: '/',
+      domain: process.env.NODE_ENV === 'production' ? process.env.COOKIE_DOMAIN : undefined
+    })
+    
+    return response
 
   } catch (error) {
     console.error('Steam callback error:', error)

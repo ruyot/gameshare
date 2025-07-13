@@ -45,15 +45,18 @@ export function useAuth() {
   }
 
   const requireAuth = (callback: () => void, redirectTo?: string) => {
-    if (!user) {
+    if (!user && !loading) {
       // Store intended destination
       const destination = redirectTo || window.location.pathname
       localStorage.setItem('authRedirect', destination)
       router.push('/auth')
       return false
     }
-    callback()
-    return true
+    if (user) {
+      callback()
+      return true
+    }
+    return false
   }
 
   const isAuthenticated = !!user
