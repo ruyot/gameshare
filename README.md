@@ -1,9 +1,3 @@
-<div id="header" align="center">
-  <img src="" width="800" height="400">
-</div>
-
-<div id="description" align="center">
-
 # GameShare
 
 ### [CLICK TO DEMO](https://gamesharez.netlify.app/)
@@ -124,39 +118,27 @@ GameShare is the **Airbnb for Gaming PCs** - a peer-to-peer marketplace that con
 
 ---
 
-## Screenshots
-
-| Description | Screenshot |
-|-------------|------------|
-| **Homepage** | ![Homepage](https://i.imgur.com/placeholder1.jpg) |
-| **Marketplace** | ![Marketplace](https://i.imgur.com/placeholder2.jpg) |
-| **Host Dashboard** | ![Host Dashboard](https://i.imgur.com/placeholder3.jpg) |
-| **Token Store** | ![Token Store](https://i.imgur.com/placeholder4.jpg) |
-| **Steam Login** | ![Steam Login](https://i.imgur.com/placeholder5.jpg) |
-
----
-
 ## Future Roadmap
 
 ### **Phase 2: Enhanced Features**
-- [:star:] **Real-time Streaming** - Direct game streaming to any device
-- [:star:] **Mobile App** - Native iOS/Android applications
-- [:star:] **AI Matchmaking** - Smart pairing of hosts and renters
-- [:star:] **Scheduled Rentals** - Book gaming sessions in advance
-- [:star:] **Team Gaming** - Multi-player session coordination
+- **Real-time Streaming** - Direct game streaming to any device
+- **Mobile App** - Native iOS/Android applications
+- **AI Matchmaking** - Smart pairing of hosts and renters
+- **Scheduled Rentals** - Book gaming sessions in advance
+- **Team Gaming** - Multi-player session coordination
 
 ### **Phase 3: Platform Expansion**
-- [:x:] **Console Integration** - PlayStation, Xbox, Nintendo Switch
-- [:x:] **VR Gaming** - Virtual reality headset rentals
-- [:x:] **Esports Integration** - Tournament hosting and participation
-- [:x:] **Developer Tools** - Game testing and development environments
-- [:x:] **Educational Gaming** - Learning-focused gaming sessions
+- **Console Integration** - PlayStation, Xbox, Nintendo Switch
+- **VR Gaming** - Virtual reality headset rentals
+- **Esports Integration** - Tournament hosting and participation
+- **Developer Tools** - Game testing and development environments
+- **Educational Gaming** - Learning-focused gaming sessions
 
 ### **Phase 4: Enterprise Features**
-- [:x:] **Gaming Cafes** - Business management tools
-- [:x:] **Corporate Gaming** - Team building and entertainment
-- [:x:] **Educational Institutions** - Campus gaming programs
-- [:x:] **Content Creators** - Streaming and recording tools
+- **Gaming Cafes** - Business management tools
+- **Corporate Gaming** - Team building and entertainment
+- **Educational Institutions** - Campus gaming programs
+- **Content Creators** - Streaming and recording tools
 
 ---
 
@@ -201,7 +183,7 @@ Just like Airbnb revolutionized travel by connecting homeowners with travelers, 
 
 ---
 
-## 🚀 Why This Will Work
+## Why This Will Work
 
 ### **Proven Market Demand**
 - **Cloud gaming growing 20% annually**
@@ -241,41 +223,12 @@ cp .env.example .env.local
 pnpm dev
 ```
 
-### **Environment Variables**
-```env
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-STEAM_API_KEY=your_steam_api_key
-STRIPE_SECRET_KEY=your_stripe_secret_key
-NEXT_PUBLIC_SITE_URL=your_site_url
-```
-
 ### **Tech Stack**
 - **Frontend**: Next.js 15, TypeScript, Tailwind CSS, Framer Motion
 - **Backend**: Supabase, Next.js API Routes
 - **Authentication**: Steam OpenID, Supabase Auth
 - **Payments**: Stripe
 - **Deployment**: Netlify
-
----
-
-## Contributing
-
-We welcome contributions! Here's how you can help:
-
-1. **Fork the repository**
-2. **Create a feature branch** (`git checkout -b feature/amazing-feature`)
-3. **Commit your changes** (`git commit -m 'Add amazing feature'`)
-4. **Push to the branch** (`git push origin feature/amazing-feature`)
-5. **Open a Pull Request**
-
-### **Areas for Contribution**
-- **UI/UX improvements** - Enhance the retro arcade aesthetic
-- **Performance optimization** - Improve loading times and responsiveness
-- **New features** - Add requested functionality
-- **Bug fixes** - Help squash bugs and improve stability
-- **Documentation** - Improve code comments and documentation
 
 ---
 
