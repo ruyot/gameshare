@@ -10,12 +10,13 @@
   NODE_ENV = "production"
   NEXT_PUBLIC_SUPABASE_URL = "https://your-project.supabase.co"
   NEXT_PUBLIC_SUPABASE_ANON_KEY = "your-anon-key"
-  NEXT_PUBLIC_SITE_URL = "https://your-site.netlify.app"
+  NEXT_PUBLIC_SITE_URL = "https://gamesharez.netlify.app"
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+# Use Netlify Next.js plugin for proper API routing
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Remove the catch-all redirect - let the Next.js plugin handle routing
 
 [[headers]]
   for = "/*"
