@@ -55,20 +55,31 @@ export function RetroNavigation() {
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/marketplace" className="flex items-center">
-            <motion.h1
-              className="text-xl font-pixel text-neon-pink neon-glow-pink-readable glitch-text"
-              data-text="GAME SHARE"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 1 }}
-              style={{
-                textShadow: "0 0 2px #ff5c8d, 0 0 4px #ff5c8d, 0 0 6px #ff5c8d, 2px 2px 0px #000000",
-                fontWeight: "bold",
-              }}
-            >
-              GAME SHARE
-            </motion.h1>
+          <Link href="/marketplace" className="flex items-center select-none">
+            <span className="relative inline-block">
+              {/* Neon Glow Layer */}
+              <span
+                aria-hidden="true"
+                className="text-xl md:text-3xl font-pixel absolute inset-0 z-0 pointer-events-none"
+                style={{
+                  color: '#ff5c8d',
+                  filter: 'blur(2.5px)',
+                  fontWeight: 'bold',
+                  letterSpacing: '0.1em',
+                }}
+              >
+                GAME SHARE
+              </span>
+              {/* Solid White Text Layer */}
+              <span
+                className="text-xl md:text-3xl font-pixel text-white font-bold relative z-10"
+                style={{
+                  letterSpacing: '0.1em',
+                }}
+              >
+                GAME SHARE
+              </span>
+            </span>
           </Link>
 
           {/* Navigation Links */}
