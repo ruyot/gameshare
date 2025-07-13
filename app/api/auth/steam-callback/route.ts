@@ -86,6 +86,19 @@ export async function GET(request: NextRequest) {
     
     console.log('User upserted successfully:', user.id)
 
+    // 3b) Seed 500 tokens for new users on first login
+    if (user.tokensBalance === 0 || user.tokensBalance === null || typeof user.tokensBalance === 'undefined') {
+      const { error: seedError } = await supabaseAdmin
+        .from('User')
+        .update({ tokensBalance: 500 })
+        .eq('id', user.id)
+      if (seedError) {
+        console.error('Error seeding test tokens:', seedError)
+      } else {
+        console.log('Seeded 500 test tokens for new user:', user.id)
+      }
+    }
+
     // 4) Create Supabase Auth user if it doesn't exist
     try {
       const { data: authUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({

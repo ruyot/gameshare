@@ -4,12 +4,13 @@ import { useState } from "react"
 import { motion } from "framer-motion"
 import { Coins, Zap, Gift } from "lucide-react"
 import { RetroCarousel } from "@/components/retro-carousel"
+import { useSession } from '@supabase/auth-helpers-react'
 
 const tokenPackages = [
-  { id: 1, tokens: 1000, price: 10, bonus: 0, popular: false },
-  { id: 2, tokens: 2500, price: 20, bonus: 500, popular: true },
-  { id: 3, tokens: 5000, price: 40, bonus: 1500, popular: false },
-  { id: 4, tokens: 10000, price: 75, bonus: 3500, popular: false },
+  { id: 1, tokens: 1000, price: 10, bonus: 0, popular: false, priceEnv: 'NEXT_PUBLIC_PRICE_1000_TOKENS' },
+  { id: 2, tokens: 2500, price: 20, bonus: 500, popular: true, priceEnv: 'NEXT_PUBLIC_PRICE_2500_TOKENS' },
+  { id: 3, tokens: 5000, price: 40, bonus: 1500, popular: false, priceEnv: 'NEXT_PUBLIC_PRICE_5000_TOKENS' },
+  { id: 4, tokens: 10000, price: 75, bonus: 3500, popular: false, priceEnv: 'NEXT_PUBLIC_PRICE_10000_TOKENS' },
 ]
 
 const giftGames = [
@@ -35,6 +36,8 @@ const giftGames = [
 
 export default function StorePage() {
   const [isAdPlaying, setIsAdPlaying] = useState(false)
+  const [loadingId, setLoadingId] = useState<number | null>(null)
+  const session = useSession()
 
   const playAd = () => {
     setIsAdPlaying(true)
@@ -42,6 +45,25 @@ export default function StorePage() {
       setIsAdPlaying(false)
       // Trigger confetti effect here
     }, 3000)
+  }
+
+  async function buyTokens(priceEnv: string, pkgId: number) {
+    setLoadingId(pkgId)
+    const priceId = process.env[priceEnv]!
+    const res = await fetch('/api/payments/create-checkout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': session?.user?.id!,
+      },
+      body: JSON.stringify({ priceId }),
+    }).then(r => r.json())
+
+    if (res.url) window.location.href = res.url
+    else {
+      setLoadingId(null)
+      alert(res.error || 'Checkout error')
+    }
   }
 
   return (
@@ -117,8 +139,12 @@ export default function StorePage() {
 
                 <div className="font-pixel text-neon-pink text-xl mb-6">${pkg.price}</div>
 
-                <button className="retro-button bg-electric-teal text-retro-dark border-electric-teal w-full">
-                  PURCHASE
+                <button
+                  className="retro-button bg-electric-teal text-retro-dark border-electric-teal w-full"
+                  onClick={() => buyTokens(pkg.priceEnv, pkg.id)}
+                  disabled={loadingId === pkg.id}
+                >
+                  {loadingId === pkg.id ? 'Redirecting...' : 'PURCHASE'}
                 </button>
               </motion.div>
             ))}
