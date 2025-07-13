@@ -10,7 +10,7 @@ const games = [
   {
     id: 1,
     title: "Cyber Punk 2077",
-    thumbnail: "/placeholder.svg?height=128&width=200",
+    thumbnail: "/cyberpunk.jpeg",
     tokensPerHour: 25,
     rating: 4.8,
     genre: "RPG",
@@ -20,7 +20,7 @@ const games = [
   {
     id: 2,
     title: "Witcher III",
-    thumbnail: "/placeholder.svg?height=128&width=200",
+    thumbnail: "/witcher.jpeg",
     tokensPerHour: 20,
     rating: 4.9,
     genre: "RPG",
@@ -30,7 +30,7 @@ const games = [
   {
     id: 3,
     title: "Call of Duty MW3",
-    thumbnail: "/placeholder.svg?height=128&width=200",
+    thumbnail: "/cod.jpeg",
     tokensPerHour: 30,
     rating: 4.6,
     genre: "FPS",
@@ -40,7 +40,7 @@ const games = [
   {
     id: 4,
     title: "FIFA 24",
-    thumbnail: "/placeholder.svg?height=128&width=200",
+    thumbnail: "/fifa.jpeg",
     tokensPerHour: 15,
     rating: 4.4,
     genre: "SPORT",
@@ -50,7 +50,7 @@ const games = [
   {
     id: 5,
     title: "Baldurs Gate 3",
-    thumbnail: "/placeholder.svg?height=128&width=200",
+    thumbnail: "/bg3.jpeg",
     tokensPerHour: 22,
     rating: 4.9,
     genre: "RPG",
@@ -60,7 +60,7 @@ const games = [
   {
     id: 6,
     title: "Spider-Man 2",
-    thumbnail: "/placeholder.svg?height=128&width=200",
+    thumbnail: "/spiderman.jpeg",
     tokensPerHour: 28,
     rating: 4.7,
     genre: "ACTION",

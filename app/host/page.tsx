@@ -14,7 +14,7 @@ const hostListings: HostListing[] = [
   {
     id: 1,
     title: "FIFA 24",
-    thumbnail: "/placeholder.svg?height=128&width=200",
+    thumbnail: "/fifa.jpeg",
     tokensPerHour: 15,
     rating: 4.4,
     genre: "SPORT",
@@ -27,7 +27,7 @@ const hostListings: HostListing[] = [
   {
     id: 2,
     title: "CALL OF DUTY MW3",
-    thumbnail: "/placeholder.svg?height=128&width=200",
+    thumbnail: "/cod.jpeg",
     tokensPerHour: 30,
     rating: 4.6,
     genre: "FPS",
@@ -40,7 +40,7 @@ const hostListings: HostListing[] = [
   {
     id: 3,
     title: "BALDURS GATE 3",
-    thumbnail: "/placeholder.svg?height=128&width=200",
+    thumbnail: "/bg3.jpeg",
     tokensPerHour: 22,
     rating: 4.9,
     genre: "RPG",
