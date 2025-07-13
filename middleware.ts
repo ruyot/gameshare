@@ -1,7 +1,19 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// List of protected route prefixes
+const protectedRoutes = ['/host', '/profile', '/tokens', '/support']
+
 export async function middleware(request: NextRequest) {
+  // Only run auth logic for protected routes
+  const path = request.nextUrl.pathname
+  const isProtected = protectedRoutes.some((prefix) => path.startsWith(prefix))
+
+  if (!isProtected) {
+    // Allow public access to all other routes
+    return NextResponse.next()
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   })
@@ -32,15 +44,17 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // If user is not signed in and the current path is not /auth, redirect to /auth
-  if (!user && !request.nextUrl.pathname.startsWith('/auth')) {
+  // If user is not signed in, redirect to /auth
+  if (!user) {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/auth'
+    // Store the intended destination for redirect-after-login
+    redirectUrl.searchParams.set('redirectTo', path)
     return NextResponse.redirect(redirectUrl)
   }
 
-  // If user is signed in and the current path is /auth, redirect to /marketplace
-  if (user && request.nextUrl.pathname.startsWith('/auth')) {
+  // If user is signed in and tries to access /auth, redirect to /marketplace
+  if (user && path.startsWith('/auth')) {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/marketplace'
     return NextResponse.redirect(redirectUrl)
@@ -51,13 +65,11 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * Feel free to modify this pattern to include more paths.
-     */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // Only match protected routes
+    '/host/:path*',
+    '/profile/:path*',
+    '/tokens/:path*',
+    '/support/:path*',
+    // You can add more protected routes here
   ],
 } 

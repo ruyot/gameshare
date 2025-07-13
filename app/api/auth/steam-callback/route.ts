@@ -179,7 +179,11 @@ export async function GET(request: NextRequest) {
     }
 
     // 7) Set session cookies server-side and redirect
-    const response = NextResponse.redirect(`${process.env.NEXT_PUBLIC_SITE_URL}/auth/complete?access_token=${accessToken}&refresh_token=${refreshToken}`)
+    // Extract returnUrl from the callback URL
+    const callbackUrlObj = new URL(request.url)
+    const returnUrl = callbackUrlObj.searchParams.get('returnUrl') || '/marketplace'
+
+    const response = NextResponse.redirect(`${process.env.NEXT_PUBLIC_SITE_URL}/auth/complete?access_token=${accessToken}&refresh_token=${refreshToken}&returnUrl=${encodeURIComponent(returnUrl)}`)
     
     // Set secure session cookies with hardened settings
     response.cookies.set('sb-access-token', accessToken, {

@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
   const refresh_token = requestUrl.searchParams.get('refresh_token')
   const error = requestUrl.searchParams.get('error')
   const message = requestUrl.searchParams.get('message')
+  const returnUrl = requestUrl.searchParams.get('returnUrl') || '/marketplace'
 
   if (error) {
     console.error('Auth completion error:', error, message)
@@ -68,10 +69,10 @@ export async function GET(request: NextRequest) {
     console.log('Auth completion successful for user:', user.id)
 
     // Redirect to marketplace or stored destination
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_SITE_URL}/marketplace`)
+    return NextResponse.redirect(returnUrl)
 
   } catch (error) {
     console.error('Auth completion server error:', error)
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_SITE_URL}/auth?error=server_error`)
   }
-} 
+}

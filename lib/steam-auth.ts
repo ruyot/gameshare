@@ -9,8 +9,14 @@ export interface SteamUser {
   steam_id: string
 }
 
-export async function initiateSteamLogin(returnUrl: string = '/marketplace') {
-  window.location.href = `/api/auth/steam-login?returnUrl=${encodeURIComponent(returnUrl)}`
+export async function initiateSteamLogin(returnUrl?: string) {
+  // If returnUrl is not provided, try to get it from the current URL's query param
+  let finalReturnUrl = returnUrl
+  if (!finalReturnUrl) {
+    const urlParams = new URLSearchParams(window.location.search)
+    finalReturnUrl = urlParams.get('redirectTo') || '/marketplace'
+  }
+  window.location.href = `/api/auth/steam-login?returnUrl=${encodeURIComponent(finalReturnUrl)}`
 }
 
 export async function completeSteamAuth(searchParams: string) {
