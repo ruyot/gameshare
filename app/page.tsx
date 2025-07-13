@@ -172,7 +172,7 @@ export default function HomePage() {
                 className="text-center crt-monitor p-6"
               >
                 <motion.div
-                  className="text-4xl md:text-6xl font-pixel text-white neon-glow-pink mb-2"
+                  className="text-3xl md:text-5xl font-pixel text-white neon-glow-pink mb-2"
                   whileHover={{ scale: 1.1 }}
                 >
                   {stat.number}
@@ -233,7 +233,7 @@ export default function HomePage() {
                   className="w-32 h-32 bg-gradient-to-br from-neon-pink to-electric-teal mx-auto pixel-border flex items-center justify-center"
                   style={{ transformStyle: "preserve-3d" }}
                 >
-                  <Cpu className="w-16 h-16 text-retro-dark" />
+                  <Cpu className="w-16 h-16 text-white" />
                 </motion.div>
               </motion.div>
             </div>
@@ -351,7 +351,7 @@ export default function HomePage() {
                 )}
 
                 <div className="crt-monitor p-8 relative z-10">
-                  <div className="text-6xl font-pixel text-neon-pink neon-glow-pink mb-4">{step.step}</div>
+                  <div className="text-6xl font-pixel text-white neon-glow-pink mb-4">{step.step}</div>
                   <div className="text-electric-teal mb-4">{step.icon}</div>
                   <h3 className="font-pixel text-white text-lg mb-4">{step.title}</h3>
                   <p className="font-pixel text-gray-400 text-sm leading-relaxed">{step.description}</p>
@@ -375,7 +375,7 @@ export default function HomePage() {
             viewport={{ once: true }}
           >
             <h3 className="font-pixel text-white text-2xl mb-4 neon-glow-pink">READY TO REVOLUTIONIZE GAMING?</h3>
-            <p className="font-pixel text-electric-teal text-sm mb-8">JOIN THE FUTURE OF GAMING TODAY</p>
+            <p className="font-pixel text-white text-sm mb-8">JOIN THE FUTURE OF GAMING TODAY</p>
 
             <Link href="/marketplace">
               <motion.button
