@@ -21,7 +21,17 @@ export function Navigation() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/marketplace" className="flex items-center space-x-2">
-            <h1 className="text-2xl font-bold font-playfair text-white drop-shadow-sm">Game Share</h1>
+            <h1
+              className="text-3xl md:text-4xl font-pixel text-white neon-glow-pink glitch-text mb-0 mx-auto"
+              data-text="GAME SHARE"
+              style={{
+                textShadow: "0 0 10px #ff5c8d, 0 0 20px #ff5c8d, 0 0 30px #ff5c8d, 4px 4px 0px #000000",
+                fontWeight: "bold",
+                letterSpacing: "0.1em"
+              }}
+            >
+              GAME SHARE
+            </h1>
           </Link>
 
           {/* Navigation Links */}
