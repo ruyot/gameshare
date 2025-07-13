@@ -21,30 +21,8 @@ export function Navigation() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/marketplace" className="flex items-center space-x-2 select-none">
-            <span className="relative inline-block">
-              {/* Neon Glow Layer */}
-              <span
-                aria-hidden="true"
-                className="text-3xl md:text-4xl font-pixel absolute inset-0 z-0 pointer-events-none"
-                style={{
-                  color: '#ff5c8d',
-                  filter: 'blur(2.5px)',
-                  fontWeight: 'bold',
-                  letterSpacing: '0.1em',
-                }}
-              >
-                GAME SHARE
-              </span>
-              {/* Solid White Text Layer */}
-              <span
-                className="text-3xl md:text-4xl font-pixel text-white relative z-10"
-                style={{
-                  fontWeight: 'bold',
-                  letterSpacing: '0.1em',
-                }}
-              >
-                GAME SHARE
-              </span>
+            <span className="text-3xl md:text-4xl font-pixel text-white font-bold" style={{ letterSpacing: '0.1em' }}>
+              GAME SHARE
             </span>
           </Link>
 
