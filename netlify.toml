@@ -1,11 +1,10 @@
 [build]
-  command = "NODE_OPTIONS='--max-old-space-size=4096' npm run build"
+  command = "npm run build"
   publish = ".next"
 
 [build.environment]
   NODE_VERSION = "18"
   NPM_VERSION = "9"
-  NODE_OPTIONS = "--max-old-space-size=4096"
 
 [context.production.environment]
   NODE_ENV = "production"
