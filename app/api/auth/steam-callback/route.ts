@@ -128,19 +128,19 @@ export async function GET(request: NextRequest) {
     const response = NextResponse.redirect(`${process.env.NEXT_PUBLIC_SITE_URL}/auth/complete?access_token=${accessToken}&refresh_token=${refreshToken}&returnUrl=${encodeURIComponent(returnUrl)}`)
     response.cookies.set('sb-access-token', accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: false, // MVP: allow on HTTP/Netlify
+      sameSite: 'lax', // MVP: allow cross-site redirects
       maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/',
-      domain: process.env.NODE_ENV === 'production' ? process.env.COOKIE_DOMAIN : undefined,
+      domain: undefined, // MVP: allow on all Netlify subdomains
     })
     response.cookies.set('sb-refresh-token', refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: false, // MVP: allow on HTTP/Netlify
+      sameSite: 'lax', // MVP: allow cross-site redirects
       maxAge: 60 * 60 * 24 * 30, // 30 days
       path: '/',
-      domain: process.env.NODE_ENV === 'production' ? process.env.COOKIE_DOMAIN : undefined,
+      domain: undefined, // MVP: allow on all Netlify subdomains
     })
     return response
   } catch (error) {
