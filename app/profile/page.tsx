@@ -70,6 +70,11 @@ export default function ProfilePage() {
   const [userSessions, setUserSessions] = useState<any[]>([])
   const [userListings, setUserListings] = useState<any[]>([])
   const { user, loading } = useAuth()
+  const [isEditing, setIsEditing] = useState(false);
+  const [editUsername, setEditUsername] = useState("");
+  const [editAvatarUrl, setEditAvatarUrl] = useState("");
+  const [editBio, setEditBio] = useState("");
+
 
   const tabs = [
     { id: "rentings", label: "RENTINGS" },
@@ -97,6 +102,9 @@ export default function ProfilePage() {
       if (response.ok) {
         const data = await response.json()
         setUserData(data)
+        setEditUsername(data.username || "");
+        setEditAvatarUrl(data.avatarUrl || "");
+        setEditBio(data.bio || "");
       }
     } catch (error) {
       console.error('Error fetching user data:', error)
@@ -184,12 +192,58 @@ export default function ProfilePage() {
                 </div>
 
                 <h2 className="font-pixel text-electric-teal text-sm mb-2 neon-glow-teal">
-                  {userData?.steamId ? `STEAM_${userData.steamId.slice(-6)}` : demoProfileData.username}
+                  {userData?.username || demoProfileData.username}
                 </h2>
 
-                <div className="led-counter inline-block">
-                  {(userData?.tokenBalance || demoProfileData.tokenBalance).toLocaleString()} TOKENS
-                </div>
+                {user && !isEditing && (
+                  <button className="mt-2 px-3 py-1 font-pixel text-xs bg-neon-pink text-white rounded" onClick={() => setIsEditing(true)}>
+                    Edit
+                  </button>
+                )}
+                {isEditing && (
+                  <form
+                    className="space-y-2 mt-4"
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      const res = await fetch('/api/user/profile', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username: editUsername, avatar_url: editAvatarUrl, bio: editBio }),
+                      });
+                      if (res.ok) {
+                        const updated = await res.json();
+                        setUserData((prev: any) => ({ ...prev, ...updated }));
+                        setIsEditing(false);
+                      } else {
+                        // handle error (e.g. username taken)
+                        alert('Failed to update profile');
+                      }
+                    }}
+                  >
+                    <div>
+                      <label className="block font-pixel text-xs text-white mb-1">Username</label>
+                      <input className="w-full px-2 py-1 border rounded" value={editUsername} onChange={e => setEditUsername(e.target.value)} required />
+                    </div>
+                    <div>
+                      <label className="block font-pixel text-xs text-white mb-1">Avatar URL</label>
+                      <input className="w-full px-2 py-1 border rounded" value={editAvatarUrl} onChange={e => setEditAvatarUrl(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="block font-pixel text-xs text-white mb-1">Bio</label>
+                      <textarea className="w-full px-2 py-1 border rounded" value={editBio} onChange={e => setEditBio(e.target.value)} />
+                    </div>
+                    <div className="flex space-x-2 mt-2">
+                      <button type="submit" className="px-3 py-1 bg-electric-teal text-retro-dark font-pixel text-xs rounded">Save</button>
+                      <button type="button" className="px-3 py-1 bg-gray-500 text-white font-pixel text-xs rounded" onClick={() => setIsEditing(false)}>Cancel</button>
+                    </div>
+                  </form>
+                )}
+                {!isEditing && userData?.avatarUrl && (
+                  <img src={userData.avatarUrl} alt="Avatar" className="mx-auto mb-2 w-16 h-16 rounded-full border-2 border-electric-teal" />
+                )}
+                {!isEditing && userData?.bio && (
+                  <div className="font-pixel text-xs text-white mt-2">{userData.bio}</div>
+                )}
               </div>
 
               {/* Stats */}

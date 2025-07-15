@@ -10,10 +10,13 @@ export function WaitlistSection() {
   const [email, setEmail] = useState("")
   const [isSubmitted, setIsSubmitted] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Here you would integrate with your email service
-    console.log("Waitlist signup:", email)
+    await fetch('/api/waitlist-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    })
     setIsSubmitted(true)
     setTimeout(() => setIsSubmitted(false), 3000)
   }

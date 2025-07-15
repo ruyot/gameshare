@@ -8,12 +8,8 @@ import { supabase } from "@/lib/supabase"
 import { User, Lock, Eye, EyeOff, Gamepad2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 
-// Steam Icon Component
-const SteamIcon = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M11.979 0C5.678 0 0.511 4.86 0.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.029 4.524 4.524s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.624 0 11.979-5.354 11.979-11.979C23.958 5.354 18.603.001 11.979.001zM7.54 18.21l-1.473-.61c.262.543.714.999 1.314 1.25 1.297.539 2.793-.076 3.332-1.375.263-.63.264-1.319.005-1.949s-.75-1.121-1.377-1.383c-.624-.26-1.29-.249-1.878-.03l1.523.63c.956.4 1.409 1.5 1.009 2.456-.397.957-1.497 1.41-2.454 1.01z" />
-  </svg>
-)
+// Remove SteamIcon, handleSteamLogin, and all Steam login button/UI
+// Only show email/password/username form for login and registration
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true)
@@ -46,19 +42,6 @@ export default function AuthPage() {
   useEffect(() => {
     typewriterEffect("WELCOME TO GAME SHARE AUTHENTICATION TERMINAL")
   }, [])
-
-  const handleSteamLogin = async () => {
-    setIsLoading(true)
-    try {
-      typewriterEffect("CONNECTING TO STEAM NETWORK...")
-      // Redirect to Steam login
-      router.push(`/api/auth/steam-login?returnUrl=${encodeURIComponent('/marketplace')}`)
-    } catch (error) {
-      console.error("Steam login error:", error)
-      typewriterEffect("ERROR: STEAM CONNECTION FAILED")
-      setIsLoading(false)
-    }
-  }
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -185,27 +168,10 @@ export default function AuthPage() {
               </motion.div>
             </div>
 
-            {/* Steam Login - Primary Option */}
-            <div className="mb-8">
-              <motion.button
-                onClick={handleSteamLogin}
-                disabled={isLoading}
-                className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-800 text-white font-pixel text-sm border-2 border-blue-500 hover:from-blue-500 hover:to-blue-700 transition-all duration-300 flex items-center justify-center space-x-3 relative overflow-hidden"
-                whileHover={{ scale: 1.02, boxShadow: "0 0 20px rgba(59, 130, 246, 0.5)" }}
-                whileTap={{ scale: 0.98 }}
-              >
-                {/* Steam Background Pattern */}
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-10 transform -skew-x-12 animate-pulse" />
-
-                <SteamIcon className="w-6 h-6" />
-                <span className="relative z-10">{isLoading ? "CONNECTING TO STEAM..." : "LOGIN WITH STEAM"}</span>
-              </motion.button>
-
-              {/* Removed the 'Recommended for gamers' text */}
-              {/* <div className="text-center mt-3">
+            {/* Removed the 'Recommended for gamers' text */}
+            {/* <div className="text-center mt-3">
                 <p className="font-pixel text-xs text-electric-teal">RECOMMENDED FOR GAMERS</p>
               </div> */}
-            </div>
 
             {/* Divider */}
             <div className="flex items-center my-8">

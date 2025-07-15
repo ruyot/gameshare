@@ -5,7 +5,6 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { motion } from "framer-motion"
 import { useAuth } from "@/hooks/use-auth"
-import { initiateSteamLogin } from "@/lib/steam-auth"
 
 export function RetroNavigation() {
   const pathname = usePathname()
@@ -43,7 +42,7 @@ export function RetroNavigation() {
   ]
 
   const handleLogin = () => {
-    initiateSteamLogin()
+    // Removed Steam login initiation
   }
 
   const handleLogout = async () => {
@@ -150,7 +149,7 @@ export function RetroNavigation() {
                       fontWeight: "900",
                     }}
                   >
-                    {user?.user_metadata?.steamId ? `S${user.user_metadata.steamId.slice(-4)}` : 'P1'}
+                    {user?.user_metadata?.username ? user.user_metadata.username : 'P1'}
                   </span>
                 </motion.div>
                 <motion.button
