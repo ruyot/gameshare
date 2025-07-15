@@ -11,15 +11,19 @@ export function WaitlistSection() {
   const [isSubmitted, setIsSubmitted] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    await fetch('/api/waitlist-email', {
+    e.preventDefault();
+    const res = await fetch('/api/waitlist-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email }),
-    })
-    setIsSubmitted(true)
-    setTimeout(() => setIsSubmitted(false), 3000)
-  }
+    });
+    if (!res.ok) {
+      alert('Something went wrong. Please try again.');
+      return;
+    }
+    setIsSubmitted(true);
+    setEmail('');
+  };
 
   return (
     <section className="relative py-32 neon-grid">

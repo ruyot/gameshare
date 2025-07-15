@@ -20,7 +20,7 @@ export function Navigation() {
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/marketplace" className="flex items-center space-x-2 select-none">
+          <Link href="/" className="flex items-center space-x-2 select-none">
             <span className="text-3xl md:text-4xl font-pixel text-white font-bold" style={{ letterSpacing: '0.1em' }}>
               GAME SHARE
             </span>
