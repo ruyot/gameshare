@@ -1,5 +1,6 @@
 "use client"
 
+import { Suspense } from 'react'
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from "framer-motion"
@@ -7,7 +8,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { ParticleField } from "@/components/ui/particle-field"
 import { Mail, Lock, User, Zap } from "lucide-react"
 
-export default function AuthPage() {
+function AuthPageInner() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -372,5 +373,25 @@ export default function AuthPage() {
         </motion.div>
       </div>
     </div>
+  )
+}
+
+function AuthPageLoading() {
+  return (
+    <div className="min-h-screen bg-retro-dark flex items-center justify-center relative overflow-hidden">
+      <ParticleField />
+      <div className="text-center relative z-10">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-neon-pink mx-auto mb-4"></div>
+        <p className="font-pixel text-neon-pink">LOADING...</p>
+      </div>
+    </div>
+  )
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={<AuthPageLoading />}>
+      <AuthPageInner />
+    </Suspense>
   )
 } 
