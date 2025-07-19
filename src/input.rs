@@ -1,5 +1,5 @@
 use anyhow::Result;
-use evdev::{uinput::VirtualDeviceBuilder, AttributeSet, EventType, Key, RelativeAxisType};
+use evdev::{uinput::VirtualDeviceBuilder, AttributeSet, InputEvent, EventType, Key, RelativeAxisType};
 use serde::{Deserialize, Serialize};
 use std::fs::OpenOptions;
 use std::os::unix::fs::OpenOptionsExt;
@@ -143,9 +143,9 @@ impl InputHandler {
             let adjusted_dy = (dy as f32 * sensitivity) as i32;
 
             let events = [
-                evdev::InputEvent::new(EventType::EV_REL, RelativeAxisType::REL_X.0, adjusted_dx),
-                evdev::InputEvent::new(EventType::EV_REL, RelativeAxisType::REL_Y.0, adjusted_dy),
-                evdev::InputEvent::new(EventType::EV_SYN, 0, 0),
+                InputEvent::new(EventType::RELATIVE, RelativeAxisType::REL_X.0, adjusted_dx),
+                InputEvent::new(EventType::RELATIVE, RelativeAxisType::REL_Y.0, adjusted_dy),
+                InputEvent::new(EventType::SYNCHRONIZATION, 0, 0),
             ];
 
             for event in events {
@@ -173,8 +173,8 @@ impl InputHandler {
             let value = if pressed { 1 } else { 0 };
             
             let events = [
-                evdev::InputEvent::new(EventType::EV_KEY, key.code(), value),
-                evdev::InputEvent::new(EventType::EV_SYN, 0, 0),
+                InputEvent::new(EventType::KEY, key.code(), value),
+                InputEvent::new(EventType::SYNCHRONIZATION, 0, 0),
             ];
 
             for event in events {
@@ -194,14 +194,14 @@ impl InputHandler {
             let mut events = Vec::new();
 
             if dy != 0 {
-                events.push(evdev::InputEvent::new(EventType::EV_REL, RelativeAxisType::REL_WHEEL.0, dy));
+                events.push(InputEvent::new(EventType::RELATIVE, RelativeAxisType::REL_WHEEL.0, dy));
             }
 
             if dx != 0 {
-                events.push(evdev::InputEvent::new(EventType::EV_REL, RelativeAxisType::REL_HWHEEL.0, dx));
+                events.push(InputEvent::new(EventType::RELATIVE, RelativeAxisType::REL_HWHEEL.0, dx));
             }
 
-            events.push(evdev::InputEvent::new(EventType::EV_SYN, 0, 0));
+            events.push(InputEvent::new(EventType::SYNCHRONIZATION, 0, 0));
 
             for event in events {
                 mouse.emit(&[event]).map_err(|e| {
@@ -220,8 +220,8 @@ impl InputHandler {
             let value = if pressed { 1 } else { 0 };
 
             let events = [
-                evdev::InputEvent::new(EventType::EV_KEY, key_code, value),
-                evdev::InputEvent::new(EventType::EV_SYN, 0, 0),
+                InputEvent::new(EventType::KEY, key_code.try_into().unwrap(), value),
+                InputEvent::new(EventType::SYNCHRONIZATION, 0, 0),
             ];
 
             for event in events {

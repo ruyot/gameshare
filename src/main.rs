@@ -18,9 +18,6 @@ mod streaming;
 
 use crate::config::Config;
 
-#[cfg(target_os = "linux")]
-use crate::{capture, encoding, input, streaming};
-
 #[derive(Parser, Debug)]
 #[command(name = "gameshare-host")]
 #[command(about = "GameShare P2P Cloud Gaming Host Agent")]
@@ -118,7 +115,7 @@ async fn main() -> Result<()> {
                     frame_count += 1;
                     
                     // Log performance stats every 5 seconds
-                    if frame_count % (config.target_framerate * 5) == 0 {
+                    if frame_count % (u64::from(config.target_framerate) * 5) == 0 {
                         let elapsed = start_time.elapsed();
                         let fps = frame_count as f64 / elapsed.as_secs_f64();
                         let memory_usage = get_memory_usage();
@@ -143,6 +140,9 @@ async fn main() -> Result<()> {
             // Small sleep to prevent busy loop
             tokio::time::sleep(std::time::Duration::from_millis(1)).await;
         }
+        
+        // Cleanup (moved inside the loop scope)
+        signaling_handle.abort();
     }
 
     #[cfg(not(target_os = "linux"))]
@@ -150,10 +150,6 @@ async fn main() -> Result<()> {
         anyhow::bail!("GameShare host agent is only supported on Linux");
     }
 
-
-
-    // Cleanup
-    signaling_handle.abort();
     Ok(())
 }
 
@@ -195,7 +191,7 @@ async fn validate_system_requirements(config: &Config) -> Result<()> {
 }
 
 fn get_memory_usage() -> f64 {
-    use sysinfo::{ProcessExt, System, SystemExt};
+    use sysinfo::{System, SystemExt, Process};
     
     let mut system = System::new();
     system.refresh_process(sysinfo::get_current_pid().unwrap());

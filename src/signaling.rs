@@ -115,7 +115,7 @@ async fn handle_client(ws: WebSocket, sessions: Sessions) {
     tokio::spawn(async move {
         while let Some(msg) = rx.recv().await {
             if let Ok(json) = serde_json::to_string(&msg) {
-                let ws_tx = ws_tx_clone.lock().await;
+                let mut ws_tx = ws_tx_clone.lock().await;
                 if let Err(e) = ws_tx.send(Message::text(json)).await {
                     error!("Failed to send WebSocket message: {}", e);
                     break;
