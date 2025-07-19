@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GameShare Client</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            flex: 1;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .controls {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .control-group {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            font-weight: 600;
+            min-width: 100px;
+        }
+
+        input[type="text"], input[type="url"] {
+            flex: 1;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-size: 16px;
+            min-width: 200px;
+        }
+
+        input[type="text"]:focus, input[type="url"]:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #4CAF50;
+            color: white;
+        }
+
+        button:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .disconnect-btn {
+            background: #f44336;
+        }
+
+        .disconnect-btn:hover {
+            background: #d32f2f;
+        }
+
+        .video-container {
+            position: relative;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #gameVideo {
+            width: 100%;
+            height: auto;
+            max-height: 70vh;
+            border-radius: 15px;
+            cursor: none;
+        }
+
+        .video-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .video-overlay.hidden {
+            display: none;
+        }
+
+        .status {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.disconnected {
+            background: #f44336;
+        }
+
+        .status-indicator.connecting {
+            background: #ff9800;
+        }
+
+        .status-indicator.connected {
+            background: #4CAF50;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .instructions h3 {
+            margin-bottom: 15px;
+            color: #ffd700;
+        }
+
+        .instructions ul {
+            list-style-position: inside;
+            line-height: 1.6;
+        }
+
+        .instructions ul li {
+            margin-bottom: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .control-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            label {
+                min-width: auto;
+                margin-bottom: 5px;
+            }
+
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎮 GameShare Client</h1>
+            <p>Decentralized P2P Cloud Gaming Platform</p>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="signalingUrl">Signaling Server:</label>
+                <input type="url" id="signalingUrl" value="ws://localhost:8080/signaling" placeholder="ws://localhost:8080/signaling">
+            </div>
+            <div class="control-group">
+                <label for="sessionId">Session ID:</label>
+                <input type="text" id="sessionId" value="test-session" placeholder="Enter session ID">
+                <button id="connectBtn" onclick="connect()">Connect</button>
+                <button id="disconnectBtn" onclick="disconnect()" disabled class="disconnect-btn">Disconnect</button>
+            </div>
+        </div>
+
+        <div class="video-container">
+            <video id="gameVideo" autoplay muted playsinline style="display: none;"></video>
+            <div id="videoOverlay" class="video-overlay">
+                <h2>🎮</h2>
+                <p>Connect to a GameShare session to start playing</p>
+            </div>
+        </div>
+
+        <div class="status">
+            <div id="connectionStatus">
+                <span class="status-indicator disconnected"></span>
+                <strong>Status:</strong> <span id="statusText">Disconnected</span>
+            </div>
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="latencyValue">--</div>
+                    <div class="stat-label">Latency (ms)</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="bitrateValue">--</div>
+                    <div class="stat-label">Bitrate (kbps)</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="fpsValue">--</div>
+                    <div class="stat-label">FPS</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="packetLossValue">--</div>
+                    <div class="stat-label">Packet Loss (%)</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <h3>📋 Instructions</h3>
+            <ul>
+                <li>Enter the signaling server URL (usually where the GameShare host is running)</li>
+                <li>Enter the session ID shared by the host</li>
+                <li>Click "Connect" to join the gaming session</li>
+                <li>Once connected, you can control the game using your mouse and keyboard</li>
+                <li>Press ESC to release pointer lock if needed</li>
+                <li>Low latency is crucial - ensure good network connection to the host</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="client.js"></script>
+</body>
+</html> 

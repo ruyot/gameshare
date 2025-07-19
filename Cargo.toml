@@ -1,0 +1,66 @@
+[package]
+name = "gameshare-cloud-backend"
+version = "0.1.0"
+edition = "2021"
+authors = ["GameShare Team"]
+description = "Decentralized P2P cloud gaming platform - Host agent"
+license = "View Only"
+
+[[bin]]
+name = "gameshare-host"
+path = "src/main.rs"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
+tokio-util = "0.7"
+
+# WebRTC
+webrtc = "0.10"
+
+# HTTP/WebSocket for signaling
+warp = "0.3"
+futures-util = "0.3"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+uuid = { version = "1.0", features = ["v4"] }
+
+# Video/Audio processing  
+# ffmpeg-next = "7.0"  # Commented out for Windows compatibility
+
+# Input handling (Linux uinput) - Linux only
+[target.'cfg(target_os = "linux")'.dependencies]
+evdev = "0.12"
+input = "0.8"
+
+# Logging and error handling
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Configuration
+clap = { version = "4.0", features = ["derive"] }
+config = "0.13"
+toml = "0.7"
+
+# System interaction
+libc = "0.2"
+nix = "0.27"
+
+# Performance monitoring
+sysinfo = "0.30"
+
+[dev-dependencies]
+tokio-test = "0.4"
+
+[features]
+default = ["nvenc"]
+nvenc = []  # NVIDIA hardware encoding
+x264 = []   # Software encoding fallback
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true 

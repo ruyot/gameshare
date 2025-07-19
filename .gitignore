@@ -1,0 +1,33 @@
+# Rust
+/target/
+Cargo.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Config files with secrets
+config.local.toml
+.env
+
+# Build artifacts
+*.exe
+*.pdb
+
+# Testing
+/test-recordings/
+/test-captures/
+
+# Temporary files
+*.tmp
+*.temp 
