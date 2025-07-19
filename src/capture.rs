@@ -205,8 +205,8 @@ impl CaptureSystem {
         let mut buffer = vec![0u8; frame_size];
 
         loop {
-            match stdout.read_exact(&mut buffer).await {
-                Ok(()) => {
+            match stdout.read(&mut buffer).await {
+                Ok(bytes_read) if bytes_read == frame_size => {
                     let frame = Frame {
                         data: buffer.clone(),
                         width: config.resolution.width,
@@ -219,6 +219,14 @@ impl CaptureSystem {
                         debug!("Frame receiver dropped, stopping capture");
                         break;
                     }
+                }
+                Ok(0) => {
+                    debug!("FFmpeg output stream ended");
+                    break;
+                }
+                Ok(bytes_read) => {
+                    warn!("Partial frame read: {} bytes, expected {}", bytes_read, frame_size);
+                    // Continue reading, this might happen due to buffering
                 }
                 Err(e) => {
                     error!("Error reading frame from FFmpeg: {}", e);

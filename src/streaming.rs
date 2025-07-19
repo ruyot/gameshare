@@ -11,7 +11,7 @@ use webrtc::ice_transport::ice_server::RTCIceServer;
 use webrtc::peer_connection::configuration::RTCConfiguration;
 use webrtc::peer_connection::peer_connection_state::RTCPeerConnectionState;
 use webrtc::peer_connection::RTCPeerConnection;
-use webrtc::rtp_transceiver::rtp_codec::{RTCRtpCodecCapability, RTCRtpCodecParameters};
+use webrtc::rtp_transceiver::rtp_codec::{RTCRtpCodecCapability, RTCRtpCodecParameters, RTPCodecType};
 use webrtc::track::track_local::track_local_static_rtp::TrackLocalStaticRTP;
 use webrtc::track::track_local::{TrackLocal, TrackLocalWriter};
 
@@ -50,7 +50,7 @@ impl WebRTCStreamer {
                 payload_type: 96,
                 stats_id: "video".to_owned(),
             },
-            webrtc::rtp_transceiver::rtp_transceiver_direction::RTCRtpTransceiverDirection::Sendonly,
+            RTPCodecType::Video,
         )?;
 
         // Register Opus codec for audio (if audio is enabled)
@@ -67,13 +67,13 @@ impl WebRTCStreamer {
                     payload_type: 111,
                     stats_id: "audio".to_owned(),
                 },
-                webrtc::rtp_transceiver::rtp_transceiver_direction::RTCRtpTransceiverDirection::Sendonly,
+                RTPCodecType::Audio,
             )?;
         }
 
         // Create API
-        let mut interceptor_registry = webrtc::interceptor::registry::Registry::new();
-        register_default_interceptors(&mut interceptor_registry, &mut media_engine)?;
+        let interceptor_registry = webrtc::interceptor::registry::Registry::new();
+        let mut interceptor_registry = register_default_interceptors(interceptor_registry, &mut media_engine)?;
 
         let api = APIBuilder::new()
             .with_media_engine(media_engine)
