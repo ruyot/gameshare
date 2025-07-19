@@ -73,7 +73,7 @@ pub async fn start_server(addr: SocketAddr) -> Result<()> {
         .and_then(handle_websocket);
 
     let health_route = warp::path("health")
-        .map(|| warp::reply::with_status("OK", warp::http::StatusCode::OK));
+        .map(|| warp::reply::with_status("OK".to_string(), warp::http::StatusCode::OK));
 
     let cors = warp::cors()
         .allow_any_origin()

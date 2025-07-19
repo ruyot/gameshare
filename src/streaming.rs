@@ -48,8 +48,9 @@ impl WebRTCStreamer {
                     rtcp_feedback: vec![],
                 },
                 payload_type: 96,
+                stats_id: "video".to_owned(),
             },
-            webrtc::rtp_transceiver::RTCRtpTransceiverDirection::SendOnly,
+            webrtc::rtp_transceiver::rtp_transceiver_direction::RTCRtpTransceiverDirection::Sendonly,
         )?;
 
         // Register Opus codec for audio (if audio is enabled)
@@ -64,13 +65,15 @@ impl WebRTCStreamer {
                         rtcp_feedback: vec![],
                     },
                     payload_type: 111,
+                    stats_id: "audio".to_owned(),
                 },
-                webrtc::rtp_transceiver::RTCRtpTransceiverDirection::SendOnly,
+                webrtc::rtp_transceiver::rtp_transceiver_direction::RTCRtpTransceiverDirection::Sendonly,
             )?;
         }
 
         // Create API
-        let mut interceptor_registry = register_default_interceptors(&mut media_engine)?;
+        let mut interceptor_registry = webrtc::interceptor::registry::Registry::new();
+        register_default_interceptors(&mut interceptor_registry, &mut media_engine)?;
 
         let api = APIBuilder::new()
             .with_media_engine(media_engine)
@@ -225,7 +228,7 @@ impl WebRTCStreamer {
     pub async fn create_answer(&self, offer_sdp: &str) -> Result<String> {
         let mut offer = webrtc::peer_connection::sdp::session_description::RTCSessionDescription::default();
         offer.sdp = offer_sdp.to_string();
-        offer.typ = webrtc::peer_connection::sdp::session_description::RTCSdpType::Offer;
+        offer.sdp_type = webrtc::peer_connection::sdp::sdp_type::RTCSdpType::Offer;
 
         self.peer_connection.set_remote_description(offer).await?;
         let answer = self.peer_connection.create_answer(None).await?;
@@ -237,9 +240,9 @@ impl WebRTCStreamer {
     pub async fn set_remote_description(&self, sdp: &str, sdp_type: &str) -> Result<()> {
         let mut session_desc = webrtc::peer_connection::sdp::session_description::RTCSessionDescription::default();
         session_desc.sdp = sdp.to_string();
-        session_desc.typ = match sdp_type {
-            "offer" => webrtc::peer_connection::sdp::session_description::RTCSdpType::Offer,
-            "answer" => webrtc::peer_connection::sdp::session_description::RTCSdpType::Answer,
+        session_desc.sdp_type = match sdp_type {
+            "offer" => webrtc::peer_connection::sdp::sdp_type::RTCSdpType::Offer,
+            "answer" => webrtc::peer_connection::sdp::sdp_type::RTCSdpType::Answer,
             _ => return Err(GameShareError::webrtc("Invalid SDP type").into()),
         };
 
@@ -304,6 +307,7 @@ async fn send_video_frame(
             csrc: vec![],
             extension_profile: 0,
             extensions: vec![],
+            extensions_padding: 0,
         },
         payload: frame.data.into(),
     }).await?;

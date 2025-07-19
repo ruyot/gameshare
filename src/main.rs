@@ -74,7 +74,7 @@ async fn main() -> Result<()> {
     info!("Starting GameShare Host Agent v{}", env!("CARGO_PKG_VERSION"));
 
     // Load configuration
-    let config = Config::load(&args.config, args)?;
+    let config = Config::load(&args.config.clone(), args)?;
     info!("Configuration loaded: {:?}", config);
 
     // Validate system requirements
@@ -191,7 +191,7 @@ async fn validate_system_requirements(config: &Config) -> Result<()> {
 }
 
 fn get_memory_usage() -> f64 {
-    use sysinfo::{System, SystemExt, Process};
+    use sysinfo::{System, SystemExt, ProcessExt};
     
     let mut system = System::new();
     system.refresh_process(sysinfo::get_current_pid().unwrap());

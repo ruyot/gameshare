@@ -1,5 +1,5 @@
 use anyhow::Result;
-use evdev::{uinput::VirtualDeviceBuilder, AttributeSet, InputEvent, EventType, Key, RelativeAxisType};
+use evdev::{uinput::{VirtualDeviceBuilder, VirtualDevice}, AttributeSet, InputEvent, EventType, Key, RelativeAxisType};
 use serde::{Deserialize, Serialize};
 use std::fs::OpenOptions;
 use std::os::unix::fs::OpenOptionsExt;
@@ -38,8 +38,8 @@ pub enum KeyModifier {
 
 pub struct InputHandler {
     config: Arc<Config>,
-    virtual_mouse: Option<evdev::Device>,
-    virtual_keyboard: Option<evdev::Device>,
+    virtual_mouse: Option<VirtualDevice>,
+    virtual_keyboard: Option<VirtualDevice>,
     event_receiver: mpsc::Receiver<GameInputEvent>,
     event_sender: mpsc::Sender<GameInputEvent>,
 }
@@ -89,7 +89,7 @@ impl InputHandler {
             .with_relative_axes(&relative_axes)?
             .build()?;
 
-        info!("Virtual mouse device created: {}", virtual_mouse.name().unwrap_or("unknown"));
+        info!("Virtual mouse device created: GameShare Virtual Mouse");
         self.virtual_mouse = Some(virtual_mouse);
         Ok(())
     }
@@ -99,9 +99,7 @@ impl InputHandler {
         
         // Add all standard keys
         for key_code in 0..255u16 {
-            if let Ok(key) = Key::new(key_code) {
-                keyboard_keys.insert(key);
-            }
+            keyboard_keys.insert(Key::new(key_code));
         }
 
         let virtual_keyboard = VirtualDeviceBuilder::new()?
@@ -109,7 +107,7 @@ impl InputHandler {
             .with_keys(&keyboard_keys)?
             .build()?;
 
-        info!("Virtual keyboard device created: {}", virtual_keyboard.name().unwrap_or("unknown"));
+        info!("Virtual keyboard device created: GameShare Virtual Keyboard");
         self.virtual_keyboard = Some(virtual_keyboard);
         Ok(())
     }
