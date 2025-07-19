@@ -18,39 +18,55 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Use 'profiles' table: select id, user_id, username, avatar_url, bio, created_at, updated_at, tokensBalance
-    // Add PATCH handler for updating username, avatar_url, bio
-    // Remove all steamId logic
-    const { data: user, error: userError } = await supabase
-      .from('Profiles')
-      .select('id, user_id, username, avatar_url, bio, created_at, updated_at, tokensBalance')
-      .eq('user_id', session.user.id)
+    // Get profile data from profiles table
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, username, full_name, avatar_url, created_at, updated_at')
+      .eq('id', session.user.id)
+      .single()
+    
+    if (profileError) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+    }
+
+    // Get tokens balance from User table
+    const { data: userData, error: userError } = await supabase
+      .from('User')
+      .select('tokensBalance')
+      .eq('auth_user_id', session.user.id)
       .single()
 
     if (userError) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Fetch user statistics
+    // Get User record to use for sessions/transactions
+    const { data: userRecord } = await supabase
+      .from('User')
+      .select('id')
+      .eq('auth_user_id', session.user.id)
+      .single()
+
+    // Fetch user statistics using User.id (not auth.users.id)
     const { data: sessions, error: sessionsError } = await supabase
       .from('Session')
-      .select('id, hours, status, startedAt, endedAt')
-      .or(`playerId.eq.${session.user.id},hostId.eq.${session.user.id}`)
+      .select('id, tokensPrepaid, startAt, endAt')
+      .eq('borrowerId', userRecord?.id)
 
     if (sessionsError) {
       console.error('Error fetching sessions:', sessionsError)
     }
 
-    // Calculate statistics
-    const totalHours = sessions?.reduce((sum, session) => sum + (session.hours || 0), 0) || 0
-    const activeSessions = sessions?.filter(s => s.status === 'active').length || 0
-    const completedSessions = sessions?.filter(s => s.status === 'ended').length || 0
+    // Calculate statistics (adjust for your schema)
+    const totalHours = sessions?.length || 0
+    const activeSessions = sessions?.filter(s => !s.endAt).length || 0
+    const completedSessions = sessions?.filter(s => s.endAt).length || 0
 
-    // Fetch total earnings (as host)
+    // Fetch total earnings (as host) using User.id
     const { data: earnings, error: earningsError } = await supabase
       .from('Transaction')
       .select('amount')
-      .eq('userId', session.user.id)
+      .eq('userId', userRecord?.id)
       .eq('type', 'earn')
 
     if (earningsError) {
@@ -60,16 +76,17 @@ export async function GET(req: NextRequest) {
     const totalEarnings = earnings?.reduce((sum, transaction) => sum + (transaction.amount || 0), 0) || 0
 
     return NextResponse.json({
-      id: user.id,
-      username: user.username,
-      avatarUrl: user.avatar_url,
-      bio: user.bio,
-      tokensBalance: user.tokensBalance || 0,
+      id: profile.id,
+      username: profile.username,
+      full_name: profile.full_name,
+      avatar_url: profile.avatar_url,
+      bio: '', // Not in your schema but kept for compatibility
+      tokensBalance: userData?.tokensBalance || 0,
       totalEarnings,
       totalHours,
       activeSessions,
       completedSessions,
-      memberSince: user.created_at,
+      memberSince: profile.created_at,
     })
   } catch (error) {
     console.error('Profile fetch error:', error)
@@ -89,21 +106,21 @@ export async function PATCH(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { username, avatar_url, bio } = body
-    // Only allow updating these fields
+    const { username, avatar_url, full_name } = body
+    // Only allow updating these fields (matching your schema)
     const updates: any = {}
     if (username !== undefined) updates.username = username
     if (avatar_url !== undefined) updates.avatar_url = avatar_url
-    if (bio !== undefined) updates.bio = bio
+    if (full_name !== undefined) updates.full_name = full_name
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
     }
     updates.updated_at = new Date().toISOString()
     const { data, error } = await supabase
-      .from('Profiles')
+      .from('profiles')
       .update(updates)
-      .eq('user_id', session.user.id)
-      .select('id, user_id, username, avatar_url, bio, created_at, updated_at')
+      .eq('id', session.user.id)
+      .select('id, username, full_name, avatar_url, created_at, updated_at')
       .single()
     if (error) {
       if (error.code === '23505') {

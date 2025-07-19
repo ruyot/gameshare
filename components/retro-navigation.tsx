@@ -42,7 +42,7 @@ export function RetroNavigation() {
   ]
 
   const handleLogin = () => {
-    // Removed Steam login initiation
+    window.location.href = '/auth'
   }
 
   const handleLogout = async () => {
@@ -134,8 +134,8 @@ export function RetroNavigation() {
               </motion.div>
             )}
             
-            {/* User Avatar & Logout */}
-            {isAuthenticated && (
+            {/* User Avatar & Logout OR Login Button */}
+            {isAuthenticated ? (
               <>
                 <motion.div 
                   className="w-8 h-8 bg-neon-pink border-2 border-electric-teal pixel-border flex items-center justify-center"
@@ -161,6 +161,15 @@ export function RetroNavigation() {
                   LOGOUT
                 </motion.button>
               </>
+            ) : (
+              <motion.button
+                onClick={handleLogin}
+                className="retro-button bg-electric-teal text-retro-dark border-electric-teal font-pixel text-xs px-4 py-2"
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95, y: 0 }}
+              >
+                LOGIN
+              </motion.button>
             )}
           </div>
         </div>

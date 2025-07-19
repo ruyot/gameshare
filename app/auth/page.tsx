@@ -1,308 +1,376 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useEffect } from "react"
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from "framer-motion"
-import { supabase } from "@/lib/supabase"
-import { User, Lock, Eye, EyeOff, Gamepad2 } from "lucide-react"
-import { useRouter } from "next/navigation"
-
-// Remove SteamIcon, handleSteamLogin, and all Steam login button/UI
-// Only show email/password/username form for login and registration
+import { useAuth } from '@/hooks/use-auth'
+import { ParticleField } from "@/components/ui/particle-field"
+import { Mail, Lock, User, Zap } from "lucide-react"
 
 export default function AuthPage() {
-  const [isLogin, setIsLogin] = useState(true)
-  const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-    username: "",
-  })
-  const [terminalText, setTerminalText] = useState("")
-  const [isTyping, setIsTyping] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'login' | 'register'>('login')
+  const { user, supabase } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
 
-  const typewriterEffect = (text: string) => {
-    setIsTyping(true)
-    setTerminalText("")
-    let i = 0
-    const timer = setInterval(() => {
-      if (i < text.length) {
-        setTerminalText(text.slice(0, i + 1))
-        i++
-      } else {
-        clearInterval(timer)
-        setIsTyping(false)
-      }
-    }, 50)
-  }
+  const [loginData, setLoginData] = useState({
+    email: '',
+    password: ''
+  })
+
+  const [registerData, setRegisterData] = useState({
+    email: '',
+    password: '',
+    confirmPassword: '',
+    username: ''
+  })
 
   useEffect(() => {
-    typewriterEffect("WELCOME TO GAME SHARE AUTHENTICATION TERMINAL")
-  }, [])
+    const errorParam = searchParams?.get('error')
+    const messageParam = searchParams?.get('message')
+    
+    if (errorParam) {
+      setError(decodeURIComponent(errorParam))
+    }
+    if (messageParam) {
+      setMessage(decodeURIComponent(messageParam))
+    }
 
-  const handleEmailAuth = async (e: React.FormEvent) => {
+    if (user) {
+      const redirectTo = localStorage.getItem('authRedirect') || '/marketplace'
+      localStorage.removeItem('authRedirect')
+      router.replace(redirectTo)
+    }
+  }, [user, router, searchParams])
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError(null)
 
     try {
-      if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: formData.email,
-          password: formData.password,
-        })
-        if (error) throw error
-        typewriterEffect("LOGIN SUCCESSFUL - REDIRECTING TO ARCADE...")
-      } else {
-        const { error } = await supabase.auth.signUp({
-          email: formData.email,
-          password: formData.password,
-          options: {
-            data: {
-              username: formData.username,
-            },
-          },
-        })
-        if (error) throw error
-        typewriterEffect("ACCOUNT CREATED - CHECK EMAIL FOR VERIFICATION")
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: loginData.email,
+        password: loginData.password,
+      })
+
+      if (error) throw error
+
+      if (data.user) {
+        const redirectTo = localStorage.getItem('authRedirect') || '/marketplace'
+        localStorage.removeItem('authRedirect')
+        router.push(redirectTo)
       }
-    } catch (error: any) {
-      typewriterEffect(`ERROR: ${error.message.toUpperCase()}`)
+    } catch (err: any) {
+      setError(err.message || 'Login failed')
     } finally {
       setIsLoading(false)
     }
   }
 
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError(null)
+
+    if (registerData.password !== registerData.confirmPassword) {
+      setError('Passwords do not match')
+      setIsLoading(false)
+      return
+    }
+
+    if (registerData.password.length < 6) {
+      setError('Password must be at least 6 characters')
+      setIsLoading(false)
+      return
+    }
+
+    if (!registerData.username.trim()) {
+      setError('Username is required')
+      setIsLoading(false)
+      return
+    }
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: registerData.email,
+        password: registerData.password,
+        options: {
+          data: { username: registerData.username }
+        }
+      })
+
+      if (error) throw error
+
+      if (data.user) {
+        await createUserProfile(data.user.id, registerData.username, registerData.email)
+        setMessage('Registration successful! Please check your email to verify your account.')
+        setRegisterData({ email: '', password: '', confirmPassword: '', username: '' })
+      }
+    } catch (err: any) {
+      setError(err.message || 'Registration failed')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const createUserProfile = async (userId: string, username: string, email: string) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .insert([{
+          id: userId,
+          username: username,
+          full_name: username,
+          avatar_url: null,
+        }])
+
+      if (error) console.error('Error creating profile:', error)
+    } catch (err) {
+      console.error('Profile creation error:', err)
+    }
+  }
+
+  if (user) {
+    return (
+      <div className="min-h-screen bg-retro-dark flex items-center justify-center relative overflow-hidden">
+        <ParticleField />
+        <div className="text-center relative z-10">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-neon-pink mx-auto mb-4"></div>
+          <p className="font-pixel text-neon-pink">REDIRECTING...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      {/* 3D Grid Background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-purple-900 via-retro-dark to-black">
-        <div
-          className="absolute inset-0 opacity-30"
-          style={{
-            background: `
-              linear-gradient(90deg, transparent 0%, rgba(255, 92, 141, 0.3) 50%, transparent 100%),
-              repeating-linear-gradient(
-                0deg,
-                transparent,
-                transparent 40px,
-                rgba(255, 92, 141, 0.1) 40px,
-                rgba(255, 92, 141, 0.1) 41px
-              ),
-              repeating-linear-gradient(
-                90deg,
-                transparent,
-                transparent 40px,
-                rgba(255, 92, 141, 0.1) 40px,
-                rgba(255, 92, 141, 0.1) 41px
-              )
-            `,
-            transform: "perspective(500px) rotateX(60deg)",
-            transformOrigin: "bottom",
-          }}
-        />
-      </div>
-
-      {/* Floating Particles */}
-      <div className="absolute inset-0 overflow-hidden">
-        {[...Array(20)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-1 h-1 bg-electric-teal"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-            }}
-            animate={{
-              y: [0, -20, 0],
-              opacity: [0.3, 1, 0.3],
-            }}
-            transition={{
-              duration: 3 + Math.random() * 2,
-              repeat: Number.POSITIVE_INFINITY,
-              delay: Math.random() * 2,
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Main Content */}
-      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen bg-retro-dark relative overflow-hidden">
+      <ParticleField />
+      
+      <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
         <motion.div
-          initial={{ opacity: 0, y: 50, rotateX: -15 }}
-          animate={{ opacity: 1, y: 0, rotateX: 0 }}
-          transition={{ duration: 1, type: "spring" }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
           className="w-full max-w-md"
-          style={{ perspective: "1000px" }}
         >
-          {/* Terminal Header */}
-          <div className="crt-monitor mb-8 p-4">
-            <div className="flex items-center space-x-2 mb-2">
-              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-              <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span className="font-pixel text-electric-teal text-xs ml-4">AUTH_TERMINAL.EXE</span>
-            </div>
-            <div className="font-pixel text-electric-teal text-xs leading-relaxed">
-              {terminalText}
-              {isTyping && <span className="animate-pulse">_</span>}
-            </div>
+          {/* Header */}
+          <div className="text-center mb-8">
+            <motion.h1 
+              className="text-4xl font-pixel text-white neon-glow-pink mb-4"
+              animate={{
+                textShadow: [
+                  '0 0 10px #ff5c8d, 0 0 20px #ff5c8d, 0 0 30px #ff5c8d',
+                  '0 0 5px #ff5c8d, 0 0 10px #ff5c8d, 0 0 15px #ff5c8d',
+                  '0 0 10px #ff5c8d, 0 0 20px #ff5c8d, 0 0 30px #ff5c8d'
+                ]
+              }}
+              transition={{ duration: 2, repeat: Infinity }}
+            >
+              GAME SHARE
+            </motion.h1>
+            <p className="font-pixel text-electric-teal text-sm">ACCESS THE NETWORK</p>
           </div>
 
-          {/* Auth Form */}
-          <div className="crt-monitor p-8 relative">
-            {/* Scan Lines Effect */}
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-neon-pink to-transparent opacity-5 animate-pulse pointer-events-none" />
+          {/* CRT Monitor Container */}
+          <div className="crt-monitor p-8">
+            {/* Error/Message Display */}
+            <AnimatePresence>
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="mb-6 p-4 bg-red-500 bg-opacity-10 border border-red-500 pixel-border"
+                >
+                  <p className="font-pixel text-red-400 text-xs">{error}</p>
+                </motion.div>
+              )}
 
-            {/* Logo */}
-            <div className="text-center mb-8">
-              <motion.div
-                className="inline-flex items-center space-x-2"
-                animate={{ rotateY: [0, 5, 0] }}
-                transition={{ duration: 4, repeat: Number.POSITIVE_INFINITY }}
-              >
-                <Gamepad2 className="w-8 h-8 text-neon-pink" />
-                <h1 className="font-pixel text-white text-lg neon-glow-pink-readable">GAME SHARE</h1>
-              </motion.div>
-            </div>
-
-            {/* Removed the 'Recommended for gamers' text */}
-            {/* <div className="text-center mt-3">
-                <p className="font-pixel text-xs text-electric-teal">RECOMMENDED FOR GAMERS</p>
-              </div> */}
-
-            {/* Divider */}
-            <div className="flex items-center my-8">
-              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-neon-pink to-transparent"></div>
-              <span className="px-4 font-pixel text-xs text-white">OR USE EMAIL</span>
-              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-neon-pink to-transparent"></div>
-            </div>
+              {message && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="mb-6 p-4 bg-electric-teal bg-opacity-10 border border-electric-teal pixel-border"
+                >
+                  <p className="font-pixel text-electric-teal text-xs">{message}</p>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Tab Switcher */}
-            <div className="flex mb-6">
+            <div className="flex mb-8 bg-retro-dark border-2 border-electric-teal pixel-border overflow-hidden">
               <button
-                onClick={() => setIsLogin(true)}
-                className={`flex-1 font-pixel text-xs py-3 transition-all duration-300 ${
-                  isLogin
-                    ? "bg-electric-teal text-retro-dark border-b-2 border-electric-teal"
-                    : "bg-transparent text-white border-b-2 border-gray-600 hover:border-neon-pink"
+                onClick={() => setActiveTab('login')}
+                className={`flex-1 font-pixel text-xs py-3 px-4 transition-all duration-200 ${
+                  activeTab === 'login'
+                    ? 'bg-neon-pink text-retro-dark'
+                    : 'text-electric-teal hover:text-neon-pink hover:bg-neon-pink hover:bg-opacity-10'
                 }`}
               >
                 LOGIN
               </button>
               <button
-                onClick={() => setIsLogin(false)}
-                className={`flex-1 font-pixel text-xs py-3 transition-all duration-300 ${
-                  !isLogin
-                    ? "bg-electric-teal text-retro-dark border-b-2 border-electric-teal"
-                    : "bg-transparent text-white border-b-2 border-gray-600 hover:border-neon-pink"
+                onClick={() => setActiveTab('register')}
+                className={`flex-1 font-pixel text-xs py-3 px-4 transition-all duration-200 ${
+                  activeTab === 'register'
+                    ? 'bg-electric-teal text-retro-dark'
+                    : 'text-electric-teal hover:text-neon-pink hover:bg-neon-pink hover:bg-opacity-10'
                 }`}
               >
                 REGISTER
               </button>
             </div>
 
-            {/* Email Form */}
-            <form onSubmit={handleEmailAuth} className="space-y-6">
-              <AnimatePresence mode="wait">
-                {!isLogin && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <label className="block font-pixel text-white text-xs mb-2">USERNAME:</label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-electric-teal" />
+            {/* Forms */}
+            <AnimatePresence mode="wait">
+              {activeTab === 'login' && (
+                <motion.form
+                  key="login"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ duration: 0.3 }}
+                  onSubmit={handleLogin}
+                  className="space-y-6"
+                >
+                  <div>
+                    <label className="block font-pixel text-white text-xs mb-2">EMAIL:</label>
+                    <div className="relative bg-retro-dark border-2 border-electric-teal pixel-border focus-within:border-neon-pink transition-colors">
+                      <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-electric-teal" />
                       <input
-                        type="text"
-                        value={formData.username}
-                        onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                        className="w-full pl-10 pr-4 py-3 bg-retro-dark border-2 border-electric-teal pixel-border text-electric-teal font-pixel text-xs focus:outline-none focus:border-neon-pink transition-colors"
-                        placeholder="PLAYER_NAME"
-                        required={!isLogin}
+                        type="email"
+                        value={loginData.email}
+                        onChange={(e) => setLoginData({...loginData, email: e.target.value})}
+                        className="w-full pl-12 pr-4 py-4 bg-transparent text-electric-teal font-pixel text-xs focus:outline-none placeholder-gray-500"
+                        placeholder="YOUR.EMAIL@EXAMPLE.COM"
+                        required
                       />
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                  </div>
 
-              <div>
-                <label className="block font-pixel text-white text-xs mb-2">EMAIL:</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-electric-teal" />
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full pl-10 pr-4 py-3 bg-retro-dark border-2 border-electric-teal pixel-border text-electric-teal font-pixel text-xs focus:outline-none focus:border-neon-pink transition-colors"
-                    placeholder="USER@EXAMPLE.COM"
-                    required
-                  />
-                </div>
-              </div>
+                  <div>
+                    <label className="block font-pixel text-white text-xs mb-2">PASSWORD:</label>
+                    <div className="relative bg-retro-dark border-2 border-electric-teal pixel-border focus-within:border-neon-pink transition-colors">
+                      <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-electric-teal" />
+                      <input
+                        type="password"
+                        value={loginData.password}
+                        onChange={(e) => setLoginData({...loginData, password: e.target.value})}
+                        className="w-full pl-12 pr-4 py-4 bg-transparent text-electric-teal font-pixel text-xs focus:outline-none placeholder-gray-500"
+                        placeholder="••••••••"
+                        required
+                      />
+                    </div>
+                  </div>
 
-              <div>
-                <label className="block font-pixel text-white text-xs mb-2">ACCESS_CODE:</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-electric-teal" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full pl-10 pr-12 py-3 bg-retro-dark border-2 border-electric-teal pixel-border text-electric-teal font-pixel text-xs focus:outline-none focus:border-neon-pink transition-colors"
-                    placeholder="••••••••••••••••"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-electric-teal hover:text-neon-pink transition-colors"
+                  <motion.button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full bg-gradient-to-r from-neon-pink to-electric-teal text-retro-dark font-pixel text-lg py-4 hover:from-electric-teal hover:to-neon-pink transition-all duration-300 disabled:opacity-50"
+                    whileHover={{ scale: 1.02, boxShadow: "0 0 30px rgba(255, 92, 141, 0.6)" }}
+                    whileTap={{ scale: 0.98 }}
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
+                    <span className="flex items-center justify-center space-x-2">
+                      <Zap className="w-5 h-5" />
+                      <span>{isLoading ? "ACCESSING..." : "LOGIN"}</span>
+                    </span>
+                  </motion.button>
+                </motion.form>
+              )}
 
-              <motion.button
-                type="submit"
-                disabled={isLoading}
-                className={`w-full py-4 font-pixel text-sm transition-all duration-300 ${
-                  isLoading
-                    ? "bg-gray-600 text-gray-400 cursor-not-allowed"
-                    : "bg-neon-pink text-retro-dark hover:bg-opacity-80 neon-glow-pink"
-                }`}
-                whileHover={!isLoading ? { scale: 1.02 } : {}}
-                whileTap={!isLoading ? { scale: 0.98 } : {}}
-              >
-                {isLoading ? "PROCESSING..." : isLogin ? "ENTER GAME" : "CREATE PLAYER"}
-              </motion.button>
-            </form>
+              {activeTab === 'register' && (
+                <motion.form
+                  key="register"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                  onSubmit={handleRegister}
+                  className="space-y-6"
+                >
+                  <div>
+                    <label className="block font-pixel text-white text-xs mb-2">USERNAME:</label>
+                    <div className="relative bg-retro-dark border-2 border-electric-teal pixel-border focus-within:border-neon-pink transition-colors">
+                      <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-electric-teal" />
+                      <input
+                        type="text"
+                        value={registerData.username}
+                        onChange={(e) => setRegisterData({...registerData, username: e.target.value})}
+                        className="w-full pl-12 pr-4 py-4 bg-transparent text-electric-teal font-pixel text-xs focus:outline-none placeholder-gray-500"
+                        placeholder="PLAYER_NAME"
+                        required
+                      />
+                    </div>
+                  </div>
 
-            {/* Forgot Password */}
-            {isLogin && (
-              <div className="text-center mt-6">
-                <button className="font-pixel text-xs text-gray-400 hover:text-electric-teal transition-colors">
-                  forgot_password?
-                </button>
-              </div>
-            )}
-          </div>
+                  <div>
+                    <label className="block font-pixel text-white text-xs mb-2">EMAIL:</label>
+                    <div className="relative bg-retro-dark border-2 border-electric-teal pixel-border focus-within:border-neon-pink transition-colors">
+                      <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-electric-teal" />
+                      <input
+                        type="email"
+                        value={registerData.email}
+                        onChange={(e) => setRegisterData({...registerData, email: e.target.value})}
+                        className="w-full pl-12 pr-4 py-4 bg-transparent text-electric-teal font-pixel text-xs focus:outline-none placeholder-gray-500"
+                        placeholder="YOUR.EMAIL@EXAMPLE.COM"
+                        required
+                      />
+                    </div>
+                  </div>
 
-          {/* Footer */}
-          <div className="text-center mt-8">
-            <p className="font-pixel text-xs text-gray-500">SECURE CONNECTION ESTABLISHED</p>
-            <div className="flex justify-center space-x-2 mt-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" style={{ animationDelay: "0.5s" }}></div>
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" style={{ animationDelay: "1s" }}></div>
-            </div>
+                  <div>
+                    <label className="block font-pixel text-white text-xs mb-2">PASSWORD:</label>
+                    <div className="relative bg-retro-dark border-2 border-electric-teal pixel-border focus-within:border-neon-pink transition-colors">
+                      <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-electric-teal" />
+                      <input
+                        type="password"
+                        value={registerData.password}
+                        onChange={(e) => setRegisterData({...registerData, password: e.target.value})}
+                        className="w-full pl-12 pr-4 py-4 bg-transparent text-electric-teal font-pixel text-xs focus:outline-none placeholder-gray-500"
+                        placeholder="••••••••"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-pixel text-white text-xs mb-2">CONFIRM PASSWORD:</label>
+                    <div className="relative bg-retro-dark border-2 border-electric-teal pixel-border focus-within:border-neon-pink transition-colors">
+                      <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-electric-teal" />
+                      <input
+                        type="password"
+                        value={registerData.confirmPassword}
+                        onChange={(e) => setRegisterData({...registerData, confirmPassword: e.target.value})}
+                        className="w-full pl-12 pr-4 py-4 bg-transparent text-electric-teal font-pixel text-xs focus:outline-none placeholder-gray-500"
+                        placeholder="••••••••"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <motion.button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full bg-gradient-to-r from-electric-teal to-neon-pink text-retro-dark font-pixel text-lg py-4 hover:from-neon-pink hover:to-electric-teal transition-all duration-300 disabled:opacity-50"
+                    whileHover={{ scale: 1.02, boxShadow: "0 0 30px rgba(25, 255, 225, 0.6)" }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <span className="flex items-center justify-center space-x-2">
+                      <Zap className="w-5 h-5" />
+                      <span>{isLoading ? "CREATING..." : "JOIN THE REVOLUTION"}</span>
+                    </span>
+                  </motion.button>
+                </motion.form>
+              )}
+            </AnimatePresence>
           </div>
         </motion.div>
       </div>
     </div>
   )
-}
+} 

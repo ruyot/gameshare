@@ -13,7 +13,6 @@ const demoProfileData = {
   totalEarnings: 15680,
   gamesHosted: 23,
   hoursPlayed: 156,
-  steamId: "76561198123456789",
 }
 
 const demoRentings = [
@@ -73,7 +72,7 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editUsername, setEditUsername] = useState("");
   const [editAvatarUrl, setEditAvatarUrl] = useState("");
-  const [editBio, setEditBio] = useState("");
+  const [editFullName, setEditFullName] = useState("");
 
 
   const tabs = [
@@ -103,8 +102,8 @@ export default function ProfilePage() {
         const data = await response.json()
         setUserData(data)
         setEditUsername(data.username || "");
-        setEditAvatarUrl(data.avatarUrl || "");
-        setEditBio(data.bio || "");
+        setEditAvatarUrl(data.avatar_url || "");
+        setEditFullName(data.full_name || "");
       }
     } catch (error) {
       console.error('Error fetching user data:', error)
@@ -184,8 +183,17 @@ export default function ProfilePage() {
             <div className="crt-monitor p-6 mb-6">
               {/* Avatar */}
               <div className="text-center mb-6">
-                <div className="w-20 h-20 bg-neon-pink border-2 border-electric-teal pixel-border mx-auto mb-4 flex items-center justify-center relative">
-                  <User className="w-10 h-10 text-retro-dark" />
+                <div className="w-20 h-20 bg-neon-pink border-2 border-electric-teal pixel-border mx-auto mb-4 flex items-center justify-center relative overflow-hidden">
+                  {userData?.avatar_url ? (
+                    <img 
+                      src={userData.avatar_url} 
+                      alt="Player Avatar" 
+                      className="w-full h-full object-cover pixelated"
+                      style={{ imageRendering: 'pixelated' }}
+                    />
+                  ) : (
+                    <User className="w-10 h-10 text-retro-dark" />
+                  )}
                   <div className="absolute -top-1 -right-1 w-4 h-4 bg-electric-teal pixel-border flex items-center justify-center">
                     <span className="font-pixel text-retro-dark text-xs">{userData?.level || demoProfileData.level}</span>
                   </div>
@@ -196,53 +204,113 @@ export default function ProfilePage() {
                 </h2>
 
                 {user && !isEditing && (
-                  <button className="mt-2 px-3 py-1 font-pixel text-xs bg-neon-pink text-white rounded" onClick={() => setIsEditing(true)}>
-                    Edit
-                  </button>
+                  <motion.button 
+                    className="retro-button bg-neon-pink text-retro-dark border-neon-pink font-pixel text-xs px-4 py-2 mt-2"
+                    onClick={() => setIsEditing(true)}
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    whileTap={{ scale: 0.95, y: 0 }}
+                  >
+                    EDIT PROFILE
+                  </motion.button>
                 )}
                 {isEditing && (
-                  <form
-                    className="space-y-2 mt-4"
+                  <motion.form
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="space-y-4 mt-4 p-4 pixel-border border-electric-teal"
+                    style={{ backgroundColor: 'var(--retro-dark)' }}
                     onSubmit={async (e) => {
                       e.preventDefault();
-                      const res = await fetch('/api/user/profile', {
-                        method: 'PATCH',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ username: editUsername, avatar_url: editAvatarUrl, bio: editBio }),
-                      });
-                      if (res.ok) {
-                        const updated = await res.json();
-                        setUserData((prev: any) => ({ ...prev, ...updated }));
-                        setIsEditing(false);
-                      } else {
-                        // handle error (e.g. username taken)
+                      try {
+                        const res = await fetch('/api/user/profile', {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ username: editUsername, avatar_url: editAvatarUrl, full_name: editFullName }),
+                        });
+                        if (res.ok) {
+                          const updated = await res.json();
+                          setUserData((prev: any) => ({ ...prev, ...updated }));
+                          setIsEditing(false);
+                          await fetchUserData(); // Refresh data
+                        } else {
+                          const error = await res.json();
+                          alert(error.error || 'Failed to update profile');
+                        }
+                      } catch (error) {
                         alert('Failed to update profile');
                       }
                     }}
                   >
                     <div>
-                      <label className="block font-pixel text-xs text-white mb-1">Username</label>
-                      <input className="w-full px-2 py-1 border rounded" value={editUsername} onChange={e => setEditUsername(e.target.value)} required />
+                      <label className="block font-pixel text-xs mb-1" style={{ color: 'var(--electric-teal)' }}>
+                        USERNAME
+                      </label>
+                      <input 
+                        className="w-full px-3 py-2 border-2 border-electric-teal font-pixel text-xs focus:border-neon-pink focus:outline-none"
+                        style={{ 
+                          backgroundColor: 'var(--retro-dark)',
+                          color: 'var(--pixel-white)'
+                        }}
+                        value={editUsername} 
+                        onChange={e => setEditUsername(e.target.value)} 
+                        required 
+                      />
                     </div>
                     <div>
-                      <label className="block font-pixel text-xs text-white mb-1">Avatar URL</label>
-                      <input className="w-full px-2 py-1 border rounded" value={editAvatarUrl} onChange={e => setEditAvatarUrl(e.target.value)} />
+                      <label className="block font-pixel text-xs mb-1" style={{ color: 'var(--electric-teal)' }}>
+                        AVATAR URL
+                      </label>
+                      <input 
+                        className="w-full px-3 py-2 border-2 border-electric-teal font-pixel text-xs focus:border-neon-pink focus:outline-none"
+                        style={{ 
+                          backgroundColor: 'var(--retro-dark)',
+                          color: 'var(--pixel-white)'
+                        }}
+                        value={editAvatarUrl} 
+                        onChange={e => setEditAvatarUrl(e.target.value)} 
+                        placeholder="https://example.com/avatar.jpg"
+                      />
                     </div>
                     <div>
-                      <label className="block font-pixel text-xs text-white mb-1">Bio</label>
-                      <textarea className="w-full px-2 py-1 border rounded" value={editBio} onChange={e => setEditBio(e.target.value)} />
+                      <label className="block font-pixel text-xs mb-1" style={{ color: 'var(--electric-teal)' }}>
+                        FULL NAME
+                      </label>
+                      <input 
+                        className="w-full px-3 py-2 border-2 border-electric-teal font-pixel text-xs focus:border-neon-pink focus:outline-none"
+                        style={{ 
+                          backgroundColor: 'var(--retro-dark)',
+                          color: 'var(--pixel-white)'
+                        }}
+                        value={editFullName} 
+                        onChange={e => setEditFullName(e.target.value)}
+                        placeholder="Your full name..."
+                      />
                     </div>
-                    <div className="flex space-x-2 mt-2">
-                      <button type="submit" className="px-3 py-1 bg-electric-teal text-retro-dark font-pixel text-xs rounded">Save</button>
-                      <button type="button" className="px-3 py-1 bg-gray-500 text-white font-pixel text-xs rounded" onClick={() => setIsEditing(false)}>Cancel</button>
+                    <div className="flex space-x-2">
+                      <motion.button 
+                        type="submit" 
+                        className="retro-button bg-electric-teal text-retro-dark border-electric-teal font-pixel text-xs px-4 py-2"
+                        whileHover={{ scale: 1.05, y: -2 }}
+                        whileTap={{ scale: 0.95, y: 0 }}
+                      >
+                        SAVE
+                      </motion.button>
+                      <motion.button 
+                        type="button" 
+                        className="retro-button bg-gray-600 text-white border-gray-600 font-pixel text-xs px-4 py-2"
+                        onClick={() => setIsEditing(false)}
+                        whileHover={{ scale: 1.05, y: -2 }}
+                        whileTap={{ scale: 0.95, y: 0 }}
+                      >
+                        CANCEL
+                      </motion.button>
                     </div>
-                  </form>
+                  </motion.form>
                 )}
-                {!isEditing && userData?.avatarUrl && (
-                  <img src={userData.avatarUrl} alt="Avatar" className="mx-auto mb-2 w-16 h-16 rounded-full border-2 border-electric-teal" />
-                )}
-                {!isEditing && userData?.bio && (
-                  <div className="font-pixel text-xs text-white mt-2">{userData.bio}</div>
+                {!isEditing && userData?.full_name && (
+                  <div className="font-pixel text-xs text-white mt-2 p-2 pixel-border border-electric-teal" style={{ backgroundColor: 'rgba(25, 255, 225, 0.1)' }}>
+                    {userData.full_name}
+                  </div>
                 )}
               </div>
 
