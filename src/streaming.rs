@@ -49,7 +49,7 @@ impl WebRTCStreamer {
                 },
                 payload_type: 96,
             },
-            webrtc::rtp_transceiver::rtp_codec::RTPCodingDirection::SendOnly,
+            webrtc::rtp_transceiver::RTCRtpTransceiverDirection::SendOnly,
         )?;
 
         // Register Opus codec for audio (if audio is enabled)
@@ -65,7 +65,7 @@ impl WebRTCStreamer {
                     },
                     payload_type: 111,
                 },
-                webrtc::rtp_transceiver::rtp_codec::RTPCodingDirection::SendOnly,
+                webrtc::rtp_transceiver::RTCRtpTransceiverDirection::SendOnly,
             )?;
         }
 
