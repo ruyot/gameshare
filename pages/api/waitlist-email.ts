@@ -54,7 +54,7 @@ export default async function handler(
     // Email to admin
     await transporter.sendMail({
       from: process.env.WAITLIST_EMAIL_USER,
-      to: 'tabeeb700@gmail.com',
+      to: 'tahmeed@gameshareit.com',
       subject: 'New Waitlist Signup',
       text: `A new user has signed up for the waitlist: ${email}`,
     });

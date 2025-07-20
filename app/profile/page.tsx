@@ -232,6 +232,8 @@ export default function ProfilePage() {
                           setUserData((prev: any) => ({ ...prev, ...updated }));
                           setIsEditing(false);
                           await fetchUserData(); // Refresh data
+                          // Trigger a page refresh to update navigation
+                          window.location.reload();
                         } else {
                           const error = await res.json();
                           alert(error.error || 'Failed to update profile');

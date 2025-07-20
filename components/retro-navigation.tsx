@@ -10,26 +10,31 @@ export function RetroNavigation() {
   const pathname = usePathname()
   const { user, loading, isAuthenticated, signOut } = useAuth()
   const [tokenCount, setTokenCount] = useState(0)
+  const [username, setUsername] = useState('')
 
   useEffect(() => {
     if (user) {
-      // Fetch real token balance from API
-      fetchUserTokens()
+      // Fetch real token balance and username from API
+      fetchUserProfile()
     } else {
       // Show demo token count for non-authenticated users
       setTokenCount(500)
+      setUsername('')
     }
   }, [user])
 
-  const fetchUserTokens = async () => {
+  const fetchUserProfile = async () => {
     try {
       const response = await fetch('/api/user/profile')
       if (response.ok) {
         const data = await response.json()
         setTokenCount(data.tokensBalance || 0)
+        setUsername(data.username || 'PLAYER')
       }
     } catch (error) {
-      console.error('Error fetching user tokens:', error)
+      console.error('Error fetching user profile:', error)
+      // Fallback to user metadata
+      setUsername(user?.user_metadata?.username || 'PLAYER')
     }
   }
 
@@ -134,9 +139,14 @@ export function RetroNavigation() {
               </motion.div>
             )}
             
-            {/* User Avatar & Logout OR Login Button */}
+            {/* User Display OR Login Button */}
             {isAuthenticated ? (
-              <>
+              <motion.div 
+                className="flex items-center space-x-2"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3 }}
+              >
                 <motion.div 
                   className="w-8 h-8 bg-neon-pink border-2 border-electric-teal pixel-border flex items-center justify-center"
                   whileHover={{ scale: 1.1 }}
@@ -149,18 +159,18 @@ export function RetroNavigation() {
                       fontWeight: "900",
                     }}
                   >
-                    {user?.user_metadata?.username ? user.user_metadata.username : 'P1'}
+                    {username ? username.charAt(0).toUpperCase() : 'P'}
                   </span>
                 </motion.div>
-                <motion.button
-                  onClick={handleLogout}
-                  className="font-pixel text-xs text-white hover:text-neon-pink transition-colors duration-200"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                <motion.span
+                  className="font-pixel text-xs text-neon-pink neon-glow-pink"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.2 }}
                 >
-                  LOGOUT
-                </motion.button>
-              </>
+                  {username || 'PLAYER'}
+                </motion.span>
+              </motion.div>
             ) : (
               <motion.button
                 onClick={handleLogin}

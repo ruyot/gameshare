@@ -29,51 +29,82 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
-    // Get tokens balance from User table
-    const { data: userData, error: userError } = await supabase
+    // Get or create User record with tokens balance
+    let userData: any = null
+    let userRecord: any = null
+    
+    const { data: existingUser, error: userError } = await supabase
       .from('User')
-      .select('tokensBalance')
+      .select('id, tokensBalance')
       .eq('auth_user_id', session.user.id)
       .single()
 
-    if (userError) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    if (userError && userError.code === 'PGRST116') {
+      // User record doesn't exist, create it
+      console.log('Creating missing User record for user:', session.user.id)
+      const { data: newUser, error: createUserError } = await supabase
+        .from('User')
+        .insert([{
+          auth_user_id: session.user.id,
+          tokensBalance: 1000, // Give existing users 1000 tokens
+        }])
+        .select('id, tokensBalance')
+        .single()
+
+      if (createUserError) {
+        console.error('Error creating User record:', createUserError)
+        // Use default values if creation fails
+        userData = { tokensBalance: 0 }
+        userRecord = null
+      } else {
+        userData = newUser
+        userRecord = newUser
+      }
+    } else if (userError) {
+      console.error('Error fetching User record:', userError)
+      // Use default values if query fails
+      userData = { tokensBalance: 0 }
+      userRecord = null
+    } else {
+      userData = existingUser
+      userRecord = existingUser
     }
 
-    // Get User record to use for sessions/transactions
-    const { data: userRecord } = await supabase
-      .from('User')
-      .select('id')
-      .eq('auth_user_id', session.user.id)
-      .single()
+    // Fetch user statistics using User.id (if available)
+    let sessions: any[] = []
+    if (userRecord?.id) {
+      const { data: sessionsData, error: sessionsError } = await supabase
+        .from('Session')
+        .select('id, tokensPrepaid, startAt, endAt')
+        .eq('borrowerId', userRecord.id)
 
-    // Fetch user statistics using User.id (not auth.users.id)
-    const { data: sessions, error: sessionsError } = await supabase
-      .from('Session')
-      .select('id, tokensPrepaid, startAt, endAt')
-      .eq('borrowerId', userRecord?.id)
-
-    if (sessionsError) {
-      console.error('Error fetching sessions:', sessionsError)
+      if (sessionsError) {
+        console.error('Error fetching sessions:', sessionsError)
+      } else {
+        sessions = sessionsData || []
+      }
     }
 
-    // Calculate statistics (adjust for your schema)
-    const totalHours = sessions?.length || 0
-    const activeSessions = sessions?.filter(s => !s.endAt).length || 0
-    const completedSessions = sessions?.filter(s => s.endAt).length || 0
+    // Calculate statistics
+    const totalHours = sessions.length || 0
+    const activeSessions = sessions.filter(s => !s.endAt).length || 0
+    const completedSessions = sessions.filter(s => s.endAt).length || 0
 
-    // Fetch total earnings (as host) using User.id
-    const { data: earnings, error: earningsError } = await supabase
-      .from('Transaction')
-      .select('amount')
-      .eq('userId', userRecord?.id)
-      .eq('type', 'earn')
+    // Fetch total earnings (as host) using User.id (if available)
+    let totalEarnings = 0
+    if (userRecord?.id) {
+      const { data: earnings, error: earningsError } = await supabase
+        .from('Transaction')
+        .select('amount')
+        .eq('userId', userRecord.id)
+        .eq('type', 'earn')
 
-    if (earningsError) {
-      console.error('Error fetching earnings:', earningsError)
+      if (earningsError) {
+        console.error('Error fetching earnings:', earningsError)
+      } else {
+        totalEarnings = earnings?.reduce((sum, transaction) => sum + (transaction.amount || 0), 0) || 0
+      }
     }
-
-    const totalEarnings = earnings?.reduce((sum, transaction) => sum + (transaction.amount || 0), 0) || 0
 
     return NextResponse.json({
       id: profile.id,

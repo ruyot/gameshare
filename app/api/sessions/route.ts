@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
   const { data: user, error: userErr } = await supabase
     .from('User')
     .select('id, tokensBalance')
-    .eq('id', session.user.id)
+    .eq('auth_user_id', session.user.id)
     .single()
   if (userErr || !user) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 })

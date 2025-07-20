@@ -18,7 +18,19 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Fetch user listings with game details
+    // First get the User record to get the internal User ID
+    const { data: userRecord, error: userError } = await supabase
+      .from('User')
+      .select('id')
+      .eq('auth_user_id', session.user.id)
+      .single()
+
+    if (userError) {
+      console.error('Error fetching User record:', userError)
+      return NextResponse.json({ listings: [] }) // Return empty listings if User record not found
+    }
+
+    // Fetch user listings with game details using User.id
     const { data: listings, error } = await supabase
       .from('Listing')
       .select(`
@@ -33,7 +45,7 @@ export async function GET(req: NextRequest) {
           thumbnailUrl
         )
       `)
-      .eq('hostId', session.user.id)
+      .eq('hostId', userRecord.id)
       .order('createdAt', { ascending: false })
 
     if (error) {

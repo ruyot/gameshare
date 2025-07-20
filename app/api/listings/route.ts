@@ -61,6 +61,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parse.error.flatten() }, { status: 400 })
   }
   const { gameId, rateTokensPerHour, maxHours } = parse.data
+
+  // Get the User record to get the internal User ID
+  const { data: userRecord, error: userError } = await supabase
+    .from('User')
+    .select('id')
+    .eq('auth_user_id', session.user.id)
+    .single()
+
+  if (userError || !userRecord) {
+    return NextResponse.json({ error: 'User record not found' }, { status: 404 })
+  }
+
   const { data, error } = await supabase
     .from('Listing')
     .insert({
@@ -68,7 +80,7 @@ export async function POST(req: NextRequest) {
       rateTokensPerHour,
       maxHours,
       status: 'active',
-      hostId: session.user.id,
+      hostId: userRecord.id,
     })
     .select()
     .single()

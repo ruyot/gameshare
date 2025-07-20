@@ -18,7 +18,19 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Fetch user sessions with game and listing details
+    // First get the User record to get the internal User ID
+    const { data: userRecord, error: userError } = await supabase
+      .from('User')
+      .select('id')
+      .eq('auth_user_id', session.user.id)
+      .single()
+
+    if (userError) {
+      console.error('Error fetching User record:', userError)
+      return NextResponse.json({ sessions: [] }) // Return empty sessions if User record not found
+    }
+
+    // Fetch user sessions with game and listing details using User.id
     const { data: sessions, error } = await supabase
       .from('Session')
       .select(`
@@ -39,7 +51,7 @@ export async function GET(req: NextRequest) {
         Host:hostId(steamId),
         Player:playerId(steamId)
       `)
-      .or(`playerId.eq.${session.user.id},hostId.eq.${session.user.id}`)
+      .or(`playerId.eq.${userRecord.id},hostId.eq.${userRecord.id}`)
       .order('startedAt', { ascending: false })
 
     if (error) {
@@ -58,8 +70,8 @@ export async function GET(req: NextRequest) {
       endedAt: session.endedAt,
       rateTokensPerHour: session.Listing?.rateTokensPerHour || 0,
       totalCost: (session.Listing?.rateTokensPerHour || 0) * session.hours,
-      isHost: session.hostId === session.user.id,
-      otherParty: session.hostId === session.user.id 
+      isHost: session.hostId === userRecord.id,
+      otherParty: session.hostId === userRecord.id 
         ? session.Player?.steamId 
         : session.Host?.steamId,
     })) || []
