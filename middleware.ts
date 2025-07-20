@@ -3,13 +3,12 @@ import type { NextRequest } from 'next/server';
 import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
 
 // Define protected routes that require authentication
-// Only protect routes that actually need authentication (like profile management)
 const protectedRoutes: string[] = ['/profile']; // Profile page requires authentication
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
   const supabase = createMiddlewareClient({ req, res });
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session }, error } = await supabase.auth.getSession();
 
   const { pathname, search } = req.nextUrl;
   const isAuthPath = pathname.startsWith('/auth') || pathname.startsWith('/api/auth');
@@ -20,18 +19,15 @@ export async function middleware(req: NextRequest) {
 
   // Only redirect to auth if user is not authenticated AND trying to access a protected route
   if (!session && isProtectedRoute && !isAuthPath && !isStatic) {
-    // Store full path+query in cookie
-    res.cookies.set('redirect_to', pathname + search, {
-      path: '/', httpOnly: true, sameSite: 'lax'
-    });
+    // Use URL parameter instead of cookie for redirect
     const authUrl = new URL('/auth', req.url);
+    authUrl.searchParams.set('redirect', pathname + search);
     return NextResponse.redirect(authUrl);
   }
 
   // If logged in and on /auth, redirect to stored destination or default
   if (session && pathname === '/auth') {
-    const redirectTo = req.cookies.get('redirect_to')?.value || '/marketplace';
-    res.cookies.delete('redirect_to');
+    const redirectTo = req.nextUrl.searchParams.get('redirect') || '/marketplace';
     const redirectUrl = new URL(redirectTo, req.url);
     return NextResponse.redirect(redirectUrl);
   }

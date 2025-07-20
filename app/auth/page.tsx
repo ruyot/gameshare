@@ -41,21 +41,28 @@ function AuthPageInner() {
     }
 
     if (user) {
-      // Check for middleware redirect cookie first, then localStorage
-      const cookieRedirect = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('redirect_to='))
-        ?.split('=')[1]
+      // Debug logging
+      console.log('Auth page: User detected, determining redirect...');
       
-      const redirectTo = cookieRedirect || localStorage.getItem('authRedirect') || '/marketplace'
+      // Check URL parameter first, then localStorage
+      const urlRedirect = searchParams?.get('redirect');
+      const localStorageRedirect = localStorage.getItem('authRedirect');
+      const redirectTo = urlRedirect || localStorageRedirect || '/marketplace';
       
-      // Clear both redirect sources
-      if (cookieRedirect) {
-        document.cookie = 'redirect_to=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
-      }
+      console.log('Auth page redirect debug:', {
+        urlRedirect,
+        localStorageRedirect,
+        finalRedirect: redirectTo,
+        userId: user.id
+      });
+      
+      // Clear localStorage redirect
       localStorage.removeItem('authRedirect')
       
-      router.replace(redirectTo)
+      // Small delay to ensure auth state is fully established
+      setTimeout(() => {
+        router.replace(redirectTo)
+      }, 100);
     }
   }, [user, router, searchParams])
 
@@ -73,18 +80,18 @@ function AuthPageInner() {
       if (error) throw error
 
       if (data.user) {
-        // Check for middleware redirect cookie first, then localStorage
-        const cookieRedirect = document.cookie
-          .split('; ')
-          .find(row => row.startsWith('redirect_to='))
-          ?.split('=')[1]
+        // Check URL parameter first, then localStorage
+        const urlRedirect = searchParams?.get('redirect');
+        const localStorageRedirect = localStorage.getItem('authRedirect');
+        const redirectTo = urlRedirect || localStorageRedirect || '/marketplace';
         
-        const redirectTo = cookieRedirect || localStorage.getItem('authRedirect') || '/marketplace'
+        console.log('Login handler redirect debug:', {
+          urlRedirect,
+          localStorageRedirect,
+          finalRedirect: redirectTo
+        });
         
-        // Clear both redirect sources
-        if (cookieRedirect) {
-          document.cookie = 'redirect_to=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
-        }
+        // Clear localStorage redirect
         localStorage.removeItem('authRedirect')
         
         router.push(redirectTo)

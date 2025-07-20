@@ -73,6 +73,12 @@ export default function ProfilePage() {
   const [editUsername, setEditUsername] = useState("");
   const [editFullName, setEditFullName] = useState("");
 
+  console.log('Profile page render:', { 
+    hasUser: !!user, 
+    loading, 
+    userId: user?.id,
+    pathname: typeof window !== 'undefined' ? window.location.pathname : 'SSR'
+  });
 
   const tabs = [
     { id: "rentings", label: "RENTINGS" },
