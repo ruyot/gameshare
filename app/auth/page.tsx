@@ -41,20 +41,10 @@ function AuthPageInner() {
     }
 
     if (user) {
-      // Debug logging
-      console.log('Auth page: User detected, determining redirect...');
-      
       // Check URL parameter first, then localStorage
       const urlRedirect = searchParams?.get('redirect');
       const localStorageRedirect = localStorage.getItem('authRedirect');
       const redirectTo = urlRedirect || localStorageRedirect || '/marketplace';
-      
-      console.log('Auth page redirect debug:', {
-        urlRedirect,
-        localStorageRedirect,
-        finalRedirect: redirectTo,
-        userId: user.id
-      });
       
       // Clear localStorage redirect
       localStorage.removeItem('authRedirect')
@@ -84,12 +74,6 @@ function AuthPageInner() {
         const urlRedirect = searchParams?.get('redirect');
         const localStorageRedirect = localStorage.getItem('authRedirect');
         const redirectTo = urlRedirect || localStorageRedirect || '/marketplace';
-        
-        console.log('Login handler redirect debug:', {
-          urlRedirect,
-          localStorageRedirect,
-          finalRedirect: redirectTo
-        });
         
         // Clear localStorage redirect
         localStorage.removeItem('authRedirect')
