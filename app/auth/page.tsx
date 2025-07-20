@@ -41,8 +41,20 @@ function AuthPageInner() {
     }
 
     if (user) {
-      const redirectTo = localStorage.getItem('authRedirect') || '/marketplace'
+      // Check for middleware redirect cookie first, then localStorage
+      const cookieRedirect = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('redirect_to='))
+        ?.split('=')[1]
+      
+      const redirectTo = cookieRedirect || localStorage.getItem('authRedirect') || '/marketplace'
+      
+      // Clear both redirect sources
+      if (cookieRedirect) {
+        document.cookie = 'redirect_to=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
+      }
       localStorage.removeItem('authRedirect')
+      
       router.replace(redirectTo)
     }
   }, [user, router, searchParams])
@@ -61,8 +73,20 @@ function AuthPageInner() {
       if (error) throw error
 
       if (data.user) {
-        const redirectTo = localStorage.getItem('authRedirect') || '/marketplace'
+        // Check for middleware redirect cookie first, then localStorage
+        const cookieRedirect = document.cookie
+          .split('; ')
+          .find(row => row.startsWith('redirect_to='))
+          ?.split('=')[1]
+        
+        const redirectTo = cookieRedirect || localStorage.getItem('authRedirect') || '/marketplace'
+        
+        // Clear both redirect sources
+        if (cookieRedirect) {
+          document.cookie = 'redirect_to=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
+        }
         localStorage.removeItem('authRedirect')
+        
         router.push(redirectTo)
       }
     } catch (err: any) {

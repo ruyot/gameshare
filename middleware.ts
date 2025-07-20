@@ -24,14 +24,16 @@ export async function middleware(req: NextRequest) {
     res.cookies.set('redirect_to', pathname + search, {
       path: '/', httpOnly: true, sameSite: 'lax'
     });
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_SITE_URL}/auth`);
+    const authUrl = new URL('/auth', req.url);
+    return NextResponse.redirect(authUrl);
   }
 
   // If logged in and on /auth, redirect to stored destination or default
   if (session && pathname === '/auth') {
     const redirectTo = req.cookies.get('redirect_to')?.value || '/marketplace';
     res.cookies.delete('redirect_to');
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_SITE_URL}${redirectTo}`);
+    const redirectUrl = new URL(redirectTo, req.url);
+    return NextResponse.redirect(redirectUrl);
   }
 
   return res;

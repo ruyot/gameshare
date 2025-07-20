@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { User, TrendingUp, Clock, Zap } from "lucide-react"
+import { TrendingUp, Clock, Zap } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { ParticleField } from "@/components/ui/particle-field"
 
@@ -71,7 +71,6 @@ export default function ProfilePage() {
   const { user, loading } = useAuth()
   const [isEditing, setIsEditing] = useState(false);
   const [editUsername, setEditUsername] = useState("");
-  const [editAvatarUrl, setEditAvatarUrl] = useState("");
   const [editFullName, setEditFullName] = useState("");
 
 
@@ -84,11 +83,13 @@ export default function ProfilePage() {
   useEffect(() => {
     if (user) {
       // Fetch real user data if authenticated
+      console.log('Profile page: User authenticated, fetching data for:', user.id)
       fetchUserData()
       fetchUserSessions()
       fetchUserListings()
     } else {
       // Use demo data for non-authenticated users
+      console.log('Profile page: No user found, loading demo data')
       setUserData(demoProfileData)
       setUserSessions(demoRentings)
       setUserListings(demoListings)
@@ -102,7 +103,6 @@ export default function ProfilePage() {
         const data = await response.json()
         setUserData(data)
         setEditUsername(data.username || "");
-        setEditAvatarUrl(data.avatar_url || "");
         setEditFullName(data.full_name || "");
       }
     } catch (error) {
@@ -141,6 +141,7 @@ export default function ProfilePage() {
   }
 
   if (loading) {
+    console.log('Profile page: Auth loading state')
     return (
       <div className="min-h-screen pt-16 flex items-center justify-center relative overflow-hidden bg-retro-dark">
         <ParticleField />
@@ -180,26 +181,10 @@ export default function ProfilePage() {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="lg:col-span-1"
           >
+            {/* Profile Header */}
             <div className="crt-monitor p-6 mb-6">
-              {/* Avatar */}
               <div className="text-center mb-6">
-                <div className="w-20 h-20 bg-neon-pink border-2 border-electric-teal pixel-border mx-auto mb-4 flex items-center justify-center relative overflow-hidden">
-                  {userData?.avatar_url ? (
-                    <img 
-                      src={userData.avatar_url} 
-                      alt="Player Avatar" 
-                      className="w-full h-full object-cover pixelated"
-                      style={{ imageRendering: 'pixelated' }}
-                    />
-                  ) : (
-                    <User className="w-10 h-10 text-retro-dark" />
-                  )}
-                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-electric-teal pixel-border flex items-center justify-center">
-                    <span className="font-pixel text-retro-dark text-xs">{userData?.level || demoProfileData.level}</span>
-                  </div>
-                </div>
-
-                <h2 className="font-pixel text-electric-teal text-sm mb-2 neon-glow-teal">
+                <h2 className="font-pixel text-electric-teal text-lg mb-4 neon-glow-teal">
                   {userData?.username || demoProfileData.username}
                 </h2>
 
@@ -225,7 +210,7 @@ export default function ProfilePage() {
                         const res = await fetch('/api/user/profile', {
                           method: 'PATCH',
                           headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ username: editUsername, avatar_url: editAvatarUrl, full_name: editFullName }),
+                          body: JSON.stringify({ username: editUsername, full_name: editFullName }),
                         });
                         if (res.ok) {
                           const updated = await res.json();
@@ -256,21 +241,6 @@ export default function ProfilePage() {
                         value={editUsername} 
                         onChange={e => setEditUsername(e.target.value)} 
                         required 
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-pixel text-xs mb-1" style={{ color: 'var(--electric-teal)' }}>
-                        AVATAR URL
-                      </label>
-                      <input 
-                        className="w-full px-3 py-2 border-2 border-electric-teal font-pixel text-xs focus:border-neon-pink focus:outline-none"
-                        style={{ 
-                          backgroundColor: 'var(--retro-dark)',
-                          color: 'var(--pixel-white)'
-                        }}
-                        value={editAvatarUrl} 
-                        onChange={e => setEditAvatarUrl(e.target.value)} 
-                        placeholder="https://example.com/avatar.jpg"
                       />
                     </div>
                     <div>
@@ -317,7 +287,13 @@ export default function ProfilePage() {
               </div>
 
               {/* Stats */}
-              <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="bg-retro-dark border border-electric-teal p-3 text-center">
+                  <Zap className="w-6 h-6 text-electric-teal mx-auto mb-2" />
+                  <div className="font-pixel text-electric-teal text-xs">{userData?.tokensBalance || demoProfileData.tokenBalance}</div>
+                  <div className="font-pixel text-white text-xs">TOKENS</div>
+                </div>
+
                 <div className="bg-retro-dark border border-neon-pink p-3 text-center">
                   <TrendingUp className="w-6 h-6 text-neon-pink mx-auto mb-2" />
                   <div className="font-pixel text-neon-pink text-xs">{userData?.totalEarnings || demoProfileData.totalEarnings}</div>
