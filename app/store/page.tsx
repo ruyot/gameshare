@@ -70,7 +70,7 @@ export default function StorePage() {
             >
               TOKEN STORE
             </h1>
-            <p className="text-white font-pixel text-sm max-w-2xl mx-auto leading-relaxed">
+            <p className="text-white font-pixel text-sm max-w-2xl mx-auto leading-relaxed relative z-20">
               POWER UP YOUR GAMING EXPERIENCE
             </p>
           </motion.div>
@@ -84,9 +84,9 @@ export default function StorePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="text-center mb-12"
+            className="text-center mb-12 relative z-20"
           >
-            <h2 className="font-pixel text-white text-lg mb-4">TOKEN PACKAGES</h2>
+            <h2 className="font-pixel text-white text-lg mb-4 relative z-20">TOKEN PACKAGES</h2>
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -96,28 +96,20 @@ export default function StorePage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.1 * index }}
-                className={`relative crt-monitor p-6 text-center ${
-                  pkg.popular ? "scale-105 border-electric-teal" : ""
-                }`}
+                className="relative crt-monitor p-6 text-center"
                 whileHover={{
-                  scale: pkg.popular ? 1.1 : 1.05,
+                  scale: 1.05,
                   rotateY: 5,
                 }}
               >
-                {pkg.popular && (
-                  <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 z-10">
-                    <span className="bg-electric-teal text-white px-3 py-1 font-pixel text-xs">POPULAR</span>
-                  </div>
-                )}
-
                 {/* Spinning Coin */}
                 <motion.div
-                  className="w-16 h-16 bg-white border-2 border-electric-teal pixel-border mx-auto mb-4 flex items-center justify-center"
+                  className="mx-auto mb-4 flex items-center justify-center"
                   animate={{ rotateY: 360 }}
                   transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
                   whileHover={{ rotateY: 720 }}
                 >
-                  <DollarSign className="w-8 h-8 text-retro-dark" />
+                  <DollarSign className="w-16 h-16 text-white" />
                 </motion.div>
 
                 <div className="font-pixel text-electric-teal text-lg mb-2">

@@ -177,9 +177,6 @@ function AuthPageInner() {
               GAME SHARE
             </motion.h1>
             <p className="font-pixel text-electric-teal text-sm">ACCESS THE NETWORK</p>
-            <p className="font-pixel text-white text-xs mt-4 max-w-md mx-auto leading-relaxed">
-              DISCLAIMER: SIGN-UP IS CURRENTLY UNAVAILABLE UNTIL PRODUCT LAUNCH, JOIN OUR WAITLIST FOR UPDATES!
-            </p>
           </div>
 
           {/* CRT Monitor Container */}
@@ -215,8 +212,8 @@ function AuthPageInner() {
                 onClick={() => setActiveTab('login')}
                 className={`flex-1 font-pixel text-xs py-3 px-4 transition-all duration-200 ${
                   activeTab === 'login'
-                    ? 'bg-neon-pink text-retro-dark'
-                    : 'text-white hover:text-neon-pink hover:bg-neon-pink hover:bg-opacity-10'
+                    ? 'bg-electric-teal text-retro-dark'
+                    : 'text-white hover:text-electric-teal hover:bg-electric-teal hover:bg-opacity-10'
                 }`}
               >
                 LOGIN
@@ -226,7 +223,7 @@ function AuthPageInner() {
                 className={`flex-1 font-pixel text-xs py-3 px-4 transition-all duration-200 ${
                   activeTab === 'register'
                     ? 'bg-electric-teal text-retro-dark'
-                    : 'text-white hover:text-neon-pink hover:bg-neon-pink hover:bg-opacity-10'
+                    : 'text-white hover:text-electric-teal hover:bg-electric-teal hover:bg-opacity-10'
                 }`}
               >
                 REGISTER
@@ -376,6 +373,18 @@ function AuthPageInner() {
               )}
             </AnimatePresence>
           </div>
+        </motion.div>
+
+        {/* Disclaimer at bottom */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 1.0 }}
+          className="text-center mt-8 relative z-10"
+        >
+          <p className="font-pixel text-white text-xs max-w-lg mx-auto leading-relaxed px-4">
+            DISCLAIMER: SIGN-UP IS CURRENTLY UNAVAILABLE UNTIL PRODUCT LAUNCH, JOIN OUR WAITLIST FOR UPDATES!
+          </p>
         </motion.div>
       </div>
     </div>

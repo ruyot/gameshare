@@ -369,7 +369,7 @@ export default function HomePage() {
               {
                 step: "02",
                 title: "LOGIN EASILY",
-                description: "Quick authentication for easy access and seamless gaming experience",
+                description: "Authentication for easy access and seamless experience",
                 icon: <Zap className="w-12 h-12" />,
               },
               {

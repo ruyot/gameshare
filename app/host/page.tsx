@@ -131,9 +131,9 @@ export default function HostPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
-            className="mb-8"
+            className="mb-8 relative z-20"
           >
-            <h2 className="font-pixel text-white text-lg mb-4 flex items-center">
+            <h2 className="font-pixel text-white text-lg mb-4 flex items-center relative z-20">
               <Server className="w-6 h-6 mr-3 text-neon-pink" />
               YOUR GAME HOSTS
             </h2>
