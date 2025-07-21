@@ -72,7 +72,7 @@ serve(async (req: Request) => {
         {
           type: "text/html",
           value: `
-            <h2 style="color:rgb(0, 0, 0);">You're on the GameShare Waitlist! 🎮</h2>
+            <h2 style="color:rgb(0, 0, 0);">You're on the GameShare Waitlist!</h2>
             <p>Thank you for joining the GameShare waitlist!</p>
             <p>You're now in line for early access to the future of entertainment and rewards.</p>
             <p>We'll keep you posted.</p>
