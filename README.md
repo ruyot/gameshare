@@ -20,10 +20,10 @@ GameShare is the **Airbnb for Gaming PCs** - a peer-to-peer marketplace that con
 
 ## Core Features
 
-### **Steam Integration**
-- **Seamless Steam Login** - One-click authentication using your existing Steam account
-- **Instant Game Access** - Play any game in your Steam library on rented hardware
-- **Profile Sync** - Your Steam username, avatar, and game library automatically imported
+### **Developer Community Platform**
+- **Indie Game Showcase** - Early-stage developers can list and demo their games
+- **Direct Player Connection** - Connect with players who want to discover new titles
+- **Community Feedback** - Get real-time feedback and bug reports from players
 
 ### **Token Economy**
 - **Earn Tokens** - Hosts earn tokens for every hour their PC is rented
@@ -47,12 +47,19 @@ GameShare is the **Airbnb for Gaming PCs** - a peer-to-peer marketplace that con
 
 ## Use Cases & Who It Helps
 
-### **For Gamers (Renters)**
-- **Budget Gamers** - Play expensive games without buying hardware
-- **Travelers** - Game anywhere without carrying a PC
-- **Students** - Access gaming during breaks without dorm restrictions
-- **Casual Players** - Try new games without commitment
-- **Esports Enthusiasts** - Practice on high-end hardware for tournaments
+### **For Indie Game Developers**
+- **Early Access Testing** - Get your game in front of real players instantly
+- **Community Building** - Build a following before official launch
+- **Feedback Collection** - Gather valuable player insights and bug reports
+- **Demo Distribution** - Share playable demos without complex distribution
+- **Revenue Generation** - Monetize early builds and prototypes
+
+### **For Players**
+- **Discover New Games** - Find hidden gems from indie developers
+- **Support Creators** - Directly support small game studios
+- **Early Access** - Play games before they hit major platforms
+- **Community Connection** - Connect with developers and other players
+- **Budget Gaming** - Access premium gaming experiences affordably
 
 ### **For PC Owners (Hosts)**
 - **Hardware Enthusiasts** - Monetize expensive builds when not gaming
@@ -62,10 +69,11 @@ GameShare is the **Airbnb for Gaming PCs** - a peer-to-peer marketplace that con
 - **Tech Professionals** - Leverage powerful workstations for extra income
 
 ### **Market Impact**
+- **Empowers Indie Developers** - Gives small studios a platform to reach players
 - **Democratizes Gaming** - Makes high-end gaming accessible to everyone
-- **Reduces E-waste** - Extends the useful life of gaming hardware
-- **Creates Income** - New revenue stream for PC owners
-- **Builds Community** - Connects gamers and hardware enthusiasts
+- **Builds Gaming Communities** - Connects developers directly with their audience
+- **Creates Income** - New revenue streams for both developers and PC owners
+- **Reduces Barriers** - Eliminates complex publishing and distribution hurdles
 
 ---
 
@@ -80,12 +88,12 @@ GameShare is the **Airbnb for Gaming PCs** - a peer-to-peer marketplace that con
 
 ### **Backend**
 - **Supabase** - Database, authentication, and real-time features
-- **Steam OpenID** - Secure authentication integration
+- **Custom Auth** - Secure authentication for developers and players
 - **Stripe** - Payment processing for token purchases
 - **Next.js API Routes** - Serverless backend functions
 
 ### **Key Integrations**
-- **Steam API** - Game library and profile data
+- **Developer APIs** - Game upload and management systems
 - **Supabase Auth** - User management and sessions
 - **Stripe Checkout** - Secure payment processing
 - **Netlify** - Deployment and hosting
@@ -94,19 +102,27 @@ GameShare is the **Airbnb for Gaming PCs** - a peer-to-peer marketplace that con
 
 ## Getting Started
 
-### **For Gamers**
-1. **Browse Games** - Visit the marketplace to see available games
-2. **Steam Login** - Click "Play Now" and authenticate with Steam
-3. **Select Game** - Choose your game and rental duration
-4. **Start Playing** - Connect to the host's PC and start gaming
-5. **Rate Experience** - Leave feedback for the host
+### **For Developers**
+1. **Join Waitlist** - Sign up to be notified when the platform launches
+2. **Send an email** - Send an email of interest directly to tahmeed@gameshareit.com
+3. **Create Developer Profile** - Showcase your studio and upcoming projects
+4. **Upload Game Demos** - Share playable builds with the community
+5. **Connect with Players** - Engage directly with your audience
+6. **Gather Feedback** - Use player insights to improve your games
 
-### **For Hosts**
-1. **Create Account** - Sign up with your Steam account
-2. **List Your PC** - Add your gaming PC to the marketplace
-3. **Set Pricing** - Choose your hourly token rate
-4. **Manage Rentals** - Monitor active rentals and earnings
-5. **Earn Tokens** - Convert tokens to real money
+### **For Gamers**
+1. **Join Community** - Sign up to discover new indie games
+2. **Browse Catalog** - Explore games from emerging developers
+3. **Play & Support** - Try games and support creators you love
+4. **Provide Feedback** - Help developers improve their games
+5. **Build Connections** - Connect with developers and other players
+
+### **For PC Hosts**
+1. **Join Platform** - Sign up to rent out your gaming hardware
+2. **List Your Setup** - Add your gaming PC to the marketplace
+3. **Set Availability** - Choose when your PC is available for rent
+4. **Earn Tokens** - Generate income from your idle hardware
+5. **Support Community** - Help gamers access high-end gaming
 
 ### **Token Packages**
 | Package | Tokens | Bonus | Price | Best For |
@@ -120,25 +136,25 @@ GameShare is the **Airbnb for Gaming PCs** - a peer-to-peer marketplace that con
 
 ## Future Roadmap
 
-### **Phase 2: Enhanced Features**
-- **Real-time Streaming** - Direct game streaming to any device
-- **Mobile App** - Native iOS/Android applications
-- **AI Matchmaking** - Smart pairing of hosts and renters
-- **Scheduled Rentals** - Book gaming sessions in advance
-- **Team Gaming** - Multi-player session coordination
+### **Phase 2: Developer Tools**
+- **Game Analytics** - Detailed player behavior and engagement metrics
+- **Version Control** - Manage multiple game builds and updates
+- **Community Forums** - Developer-player discussion boards
+- **Bug Tracking** - Integrated issue reporting and management
+- **Developer API** - Programmatic access to platform features
 
-### **Phase 3: Platform Expansion**
-- **Console Integration** - PlayStation, Xbox, Nintendo Switch
-- **VR Gaming** - Virtual reality headset rentals
-- **Esports Integration** - Tournament hosting and participation
-- **Developer Tools** - Game testing and development environments
-- **Educational Gaming** - Learning-focused gaming sessions
+### **Phase 3: Community Expansion**
+- **Developer Showcases** - Featured indie game spotlights
+- **Player Tournaments** - Community-organized gaming events
+- **Creative Collaboration** - Tools for developers to work together
+- **Mentorship Programs** - Connect experienced devs with newcomers
+- **Publishing Support** - Help indie games reach major platforms
 
-### **Phase 4: Enterprise Features**
-- **Gaming Cafes** - Business management tools
-- **Corporate Gaming** - Team building and entertainment
-- **Educational Institutions** - Campus gaming programs
-- **Content Creators** - Streaming and recording tools
+### **Phase 4: Platform Maturity**
+- **Mobile Integration** - Native iOS/Android support
+- **VR/AR Support** - Immersive gaming experiences
+- **Educational Tools** - Game development learning resources
+- **Investment Matching** - Connect developers with funding opportunities
 
 ---
 
@@ -165,21 +181,21 @@ Just like Airbnb revolutionized travel by connecting homeowners with travelers, 
 ### **Gaming Industry Stats**
 - **$200B+ global gaming market**
 - **3.2B gamers worldwide**
-- **120M+ active Steam users**
-- **$1,500+ average gaming PC cost**
-- **80% hardware idle time**
+- **500K+ indie game developers globally**
+- **30% of games are developed by small studios**
+- **Growing demand for game discovery platforms**
 
 ### **Competitive Landscape**
-- **Cloud Gaming Services** - Expensive subscriptions, limited game selection
-- **Gaming Cafes** - Physical locations, limited hours, travel required
-- **Hardware Rental** - Expensive, long-term commitments, delivery logistics
+- **Major Platforms** - High barriers to entry, limited visibility for indies
+- **Game Jams** - Temporary events, no ongoing community support
+- **Development Forums** - Discussion-only, no integrated play testing
 
 ### **Our Advantages**
-- **Steam Integration** - Access to 50,000+ games instantly
-- **Pay-per-use** - No subscriptions or commitments
-- **Global reach** - Works anywhere with internet
-- **Community-driven** - Peer-to-peer trust and ratings
-- **Cost-effective** - Fraction of cloud gaming costs
+- **Direct Developer-Player Connection** - No middleman publishers
+- **Real-time Feedback** - Instant player insights during development
+- **Global reach** - Connect with players worldwide
+- **Community-driven** - Organic discovery and word-of-mouth growth
+- **Low barriers** - Easy entry for developers of all sizes
 
 ---
 
@@ -187,17 +203,17 @@ Just like Airbnb revolutionized travel by connecting homeowners with travelers, 
 
 ### **Proven Market Demand**
 - **Cloud gaming growing 20% annually**
-- **Hardware shortages during COVID**
-- **Mobile gaming shows convenience preference**
-- **Esports creating demand for high-performance**
+- **500K+ developers seeking better platforms**
+- **Players actively seeking game discovery alternatives**
+- **Community-driven platforms showing strong engagement**
 
 ### **Network Effects**
-- **More hosts = better experience = more renters**
-- **Steam ecosystem lock-in**
-- **Community building potential**
-- **Viral growth through gaming communities**
+- **More developers = more games = more hosts = more players**
+- **Direct developer-player relationships build loyalty**
+- **Community feedback improves game quality**
+- **Viral growth through developer and gamer networks**
 
-### **Revenue Model**
+### **Revenue Model (WIP)**
 - **10-20% transaction fees**
 - **Token package sales**
 - **Premium features for hosts**
@@ -228,7 +244,7 @@ pnpm dev
 - **Backend**: Supabase, Next.js API Routes
 - **Authentication**: Steam OpenID, Supabase Auth
 - **Payments**: Stripe
-- **Deployment**: Netlify
+- **Deployment**: Vercel
 
 ---
 
@@ -248,7 +264,9 @@ This project is licensed under a View-Only License (VOL) 1.0, see LICENSE for mo
 
 <div align="center">
 
-**Let's revolutionalize gaming one click at a time, join the GameShare community.**
+**Empowering developers and connecting communities. Join the GameShare revolution and change entertainment forever.**
+
+[Join Our Waitlist](https://gameshareit.com) • [Developer Portal](https://gameshareit.com/host) • [Community](https://gameshareit.com/support)
 
 </div>
 
