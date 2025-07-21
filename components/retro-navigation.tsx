@@ -149,7 +149,7 @@ export function RetroNavigation() {
             {/* User Display OR Login Button */}
             {isAuthenticated ? (
               <motion.span
-                className="font-pixel text-xs text-neon-pink neon-glow-pink"
+                className="font-pixel text-xs text-white neon-glow-pink"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.3 }}
@@ -159,7 +159,7 @@ export function RetroNavigation() {
             ) : (
               <motion.button
                 onClick={handleLogin}
-                className="retro-button bg-electric-teal text-retro-dark border-electric-teal font-pixel text-xs px-4 py-2"
+                className="retro-button bg-electric-teal text-white border-electric-teal font-pixel text-xs px-4 py-2"
                 whileHover={{ scale: 1.05, y: -2 }}
                 whileTap={{ scale: 0.95, y: 0 }}
               >

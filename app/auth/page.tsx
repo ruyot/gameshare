@@ -177,6 +177,9 @@ function AuthPageInner() {
               GAME SHARE
             </motion.h1>
             <p className="font-pixel text-electric-teal text-sm">ACCESS THE NETWORK</p>
+            <p className="font-pixel text-white text-xs mt-4 max-w-md mx-auto leading-relaxed">
+              DISCLAIMER: SIGN-UP IS CURRENTLY UNAVAILABLE UNTIL PRODUCT LAUNCH, JOIN OUR WAITLIST FOR UPDATES!
+            </p>
           </div>
 
           {/* CRT Monitor Container */}
@@ -213,7 +216,7 @@ function AuthPageInner() {
                 className={`flex-1 font-pixel text-xs py-3 px-4 transition-all duration-200 ${
                   activeTab === 'login'
                     ? 'bg-neon-pink text-retro-dark'
-                    : 'text-electric-teal hover:text-neon-pink hover:bg-neon-pink hover:bg-opacity-10'
+                    : 'text-white hover:text-neon-pink hover:bg-neon-pink hover:bg-opacity-10'
                 }`}
               >
                 LOGIN
@@ -223,7 +226,7 @@ function AuthPageInner() {
                 className={`flex-1 font-pixel text-xs py-3 px-4 transition-all duration-200 ${
                   activeTab === 'register'
                     ? 'bg-electric-teal text-retro-dark'
-                    : 'text-electric-teal hover:text-neon-pink hover:bg-neon-pink hover:bg-opacity-10'
+                    : 'text-white hover:text-neon-pink hover:bg-neon-pink hover:bg-opacity-10'
                 }`}
               >
                 REGISTER
@@ -360,7 +363,7 @@ function AuthPageInner() {
                   <motion.button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full bg-gradient-to-r from-electric-teal to-neon-pink text-retro-dark font-pixel text-lg py-4 hover:from-neon-pink hover:to-electric-teal transition-all duration-300 disabled:opacity-50"
+                    className="w-full bg-gradient-to-r from-electric-teal to-neon-pink text-white font-pixel text-lg py-4 hover:from-neon-pink hover:to-electric-teal transition-all duration-300 disabled:opacity-50"
                     whileHover={{ scale: 1.02, boxShadow: "0 0 30px rgba(25, 255, 225, 0.6)" }}
                     whileTap={{ scale: 0.98 }}
                   >

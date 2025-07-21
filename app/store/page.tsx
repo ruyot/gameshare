@@ -4,8 +4,7 @@ import { useState } from "react"
 import { motion } from "framer-motion"
 import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
-import { DollarSign, Play, Trophy, Star, Zap, Gift, Target, Users, Clock, TrendingUp } from "lucide-react"
-import { RetroCarousel } from "@/components/retro-carousel"
+import { DollarSign, Play, Trophy, Star, Zap, Target, Users, Clock, TrendingUp } from "lucide-react"
 import { ParticleField } from "@/components/ui/particle-field"
 
 const tokenPackages = [
@@ -15,26 +14,7 @@ const tokenPackages = [
   { id: 4, tokens: 10000, price: 75, bonus: 3500, popular: false, priceEnv: 'NEXT_PUBLIC_PRICE_10000_TOKENS' },
 ]
 
-const giftGames = [
-  {
-    id: 1,
-    title: "MYSTERY AAA GAME",
-    description: "UNLOCK PREMIUM TITLE",
-    image: "/placeholder.svg",
-  },
-  {
-    id: 2,
-    title: "INDIE BUNDLE PACK",
-    description: "5 HANDPICKED GAMES",
-    image: "/placeholder.svg",
-  },
-  {
-    id: 3,
-    title: "RACING COLLECTION",
-    description: "SPEED DEMON BUNDLE",
-    image: "/placeholder.svg",
-  },
-]
+
 
 export default function StorePage() {
   const [isAdPlaying, setIsAdPlaying] = useState(false)
@@ -90,7 +70,7 @@ export default function StorePage() {
             >
               TOKEN STORE
             </h1>
-            <p className="text-neon-pink font-pixel text-sm max-w-2xl mx-auto leading-relaxed">
+            <p className="text-white font-pixel text-sm max-w-2xl mx-auto leading-relaxed">
               POWER UP YOUR GAMING EXPERIENCE
             </p>
           </motion.div>
@@ -106,7 +86,7 @@ export default function StorePage() {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="text-center mb-12"
           >
-            <h2 className="font-pixel text-neon-pink text-lg mb-4">TOKEN PACKAGES</h2>
+            <h2 className="font-pixel text-white text-lg mb-4">TOKEN PACKAGES</h2>
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -125,19 +105,19 @@ export default function StorePage() {
                 }}
               >
                 {pkg.popular && (
-                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                  <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 z-10">
                     <span className="bg-electric-teal text-white px-3 py-1 font-pixel text-xs">POPULAR</span>
                   </div>
                 )}
 
                 {/* Spinning Coin */}
                 <motion.div
-                  className="w-16 h-16 bg-neon-pink border-2 border-electric-teal pixel-border mx-auto mb-4 flex items-center justify-center"
+                  className="w-16 h-16 bg-white border-2 border-electric-teal pixel-border mx-auto mb-4 flex items-center justify-center"
                   animate={{ rotateY: 360 }}
                   transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
                   whileHover={{ rotateY: 720 }}
                 >
-                  <DollarSign className="w-8 h-8 text-white" />
+                  <DollarSign className="w-8 h-8 text-retro-dark" />
                 </motion.div>
 
                 <div className="font-pixel text-electric-teal text-lg mb-2">
@@ -178,7 +158,7 @@ export default function StorePage() {
 
             <Zap className="w-16 h-16 text-electric-teal mx-auto mb-4 animate-bounce" />
 
-            <h3 className="font-pixel text-neon-pink text-lg mb-4 neon-glow-pink">EARN FREE TOKENS!</h3>
+            <h3 className="font-pixel text-white text-lg mb-4 neon-glow-pink">EARN FREE TOKENS!</h3>
 
             <p className="font-pixel text-white text-xs mb-6 leading-relaxed max-w-2xl mx-auto">
               WATCH ADS AND COMPLETE MISSIONS TO EARN TOKENS
@@ -229,24 +209,7 @@ export default function StorePage() {
         </div>
       </section>
 
-      {/* Gift Codes Carousel */}
-      <section className="py-16">
-        <div className="max-w-7xl mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.6 }}
-            className="text-center mb-12"
-          >
-            <h2 className="font-pixel text-electric-teal text-lg mb-4 flex items-center justify-center">
-              <Gift className="w-6 h-6 mr-3" />
-              GIFT CODE CAROUSEL
-            </h2>
-          </motion.div>
 
-          <RetroCarousel items={giftGames} />
-        </div>
-      </section>
     </div>
   )
 }

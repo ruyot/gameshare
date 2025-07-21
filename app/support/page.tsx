@@ -71,10 +71,40 @@ export default function SupportPage() {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("Support ticket submitted:", formData)
-    setFormData({ subject: "", email: "", message: "" })
+    
+    if (!formData.subject || !formData.email || !formData.message) {
+      alert('Please fill in all fields')
+      return
+    }
+
+    try {
+      // Send support ticket via secure API route
+      const response = await fetch('/api/support', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          subject: formData.subject,
+          email: formData.email,
+          message: formData.message
+        })
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        alert('Support ticket submitted successfully! We\'ll get back to you soon.')
+        setFormData({ subject: "", email: "", message: "" })
+      } else {
+        throw new Error(data.error || 'Failed to send ticket')
+      }
+    } catch (error) {
+      console.error('Support ticket error:', error)
+      alert('Failed to submit ticket. Please try again or email us directly.')
+    }
   }
 
   return (
@@ -107,8 +137,8 @@ export default function SupportPage() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            <h2 className="font-pixel text-electric-teal text-lg mb-8 flex items-center neon-glow-teal">
-              <HelpCircle className="w-6 h-6 mr-3" />
+            <h2 className="font-pixel text-white text-lg mb-8 flex items-center neon-glow-teal">
+              <HelpCircle className="w-6 h-6 mr-3 text-electric-teal" />
               FAQ DATABASE
             </h2>
 

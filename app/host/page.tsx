@@ -133,8 +133,8 @@ export default function HostPage() {
             transition={{ duration: 0.8, delay: 0.4 }}
             className="mb-8"
           >
-            <h2 className="font-pixel text-neon-pink text-lg mb-4 flex items-center">
-              <Server className="w-6 h-6 mr-3" />
+            <h2 className="font-pixel text-white text-lg mb-4 flex items-center">
+              <Server className="w-6 h-6 mr-3 text-neon-pink" />
               YOUR GAME HOSTS
             </h2>
           </motion.div>

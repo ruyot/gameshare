@@ -61,9 +61,9 @@ export default function HomePage() {
 
   const stats = [
     { number: "3.2B", label: "GLOBAL GAMERS", suffix: "" },
-    { number: "200", label: "BILLION MARKET", suffix: "B+" },
-    { number: "80", label: "HARDWARE IDLE", suffix: "%" },
-    { number: "1500", label: "AVG PC COST", suffix: "$+" },
+    { number: "200B+", label: "BILLION MARKET", suffix: "" },
+    { number: "80%", label: "HARDWARE IDLE", suffix: "" },
+    { number: "1500$", label: "AVG PC COST", suffix: "" },
   ]
 
   return (
@@ -220,13 +220,13 @@ export default function HomePage() {
                 className="text-center crt-monitor p-6"
               >
                 <motion.div
-                  className="text-3xl md:text-5xl font-pixel text-white neon-glow-pink mb-2"
+                  className="text-xl md:text-3xl font-pixel text-white neon-glow-pink mb-2 text-center"
                   whileHover={{ scale: 1.1 }}
                 >
                   {stat.number}
                   {stat.suffix}
                 </motion.div>
-                <div className="font-pixel text-electric-teal text-xs">{stat.label}</div>
+                <div className="font-pixel text-electric-teal text-xs text-center">{stat.label}</div>
               </motion.div>
             ))}
           </motion.div>
@@ -278,10 +278,10 @@ export default function HomePage() {
                     rotateY: { duration: 10, repeat: Number.POSITIVE_INFINITY, ease: "linear" },
                     y: { duration: 4, repeat: Number.POSITIVE_INFINITY },
                   }}
-                  className="w-32 h-32 bg-gradient-to-br from-neon-pink to-electric-teal mx-auto pixel-border flex items-center justify-center"
+                  className="w-32 h-32 bg-transparent border-2 border-white mx-auto pixel-border flex items-center justify-center"
                   style={{ transformStyle: "preserve-3d" }}
                 >
-                  <Cpu className="w-16 h-16 text-white" />
+                  <Gamepad2 className="w-16 h-16 text-white" />
                 </motion.div>
               </motion.div>
             </div>
@@ -368,8 +368,8 @@ export default function HomePage() {
               },
               {
                 step: "02",
-                title: "STEAM LOGIN",
-                description: "One-click authentication with your Steam account for instant access",
+                title: "LOGIN EASILY",
+                description: "Quick authentication for easy access and seamless gaming experience",
                 icon: <Zap className="w-12 h-12" />,
               },
               {
@@ -407,6 +407,19 @@ export default function HomePage() {
               </motion.div>
             ))}
           </div>
+          
+          {/* Disclaimer */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.8 }}
+            viewport={{ once: true }}
+            className="text-center mt-16"
+          >
+            <p className="font-pixel text-white text-xs max-w-3xl mx-auto leading-relaxed">
+              DISCLAIMER: GAMESHARE ISN'T FULLY LAUNCHED YET, SIGNUP TO THE WAITLIST FOR UPDATES ON OUR LAUNCH!
+            </p>
+          </motion.div>
         </div>
       </section>
 
