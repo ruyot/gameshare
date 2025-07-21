@@ -69,7 +69,7 @@ export default function ProfilePage() {
   const [userData, setUserData] = useState<any>(null)
   const [userSessions, setUserSessions] = useState<any[]>([])
   const [userListings, setUserListings] = useState<any[]>([])
-  const { user, loading } = useAuth()
+  const { user, loading, signOut } = useAuth()
   const router = useRouter()
   const [isEditing, setIsEditing] = useState(false);
   const [editUsername, setEditUsername] = useState("");
@@ -289,6 +289,22 @@ export default function ProfilePage() {
                     <div className="font-pixel text-xs text-white mt-2 p-2 pixel-border border-electric-teal" style={{ backgroundColor: 'rgba(25, 255, 225, 0.1)' }}>
                       {userData.full_name}
                     </div>
+                  )}
+
+                  {/* Sign Out Button */}
+                  {user && !isEditing && (
+                    <motion.button 
+                      className="retro-button bg-red-600 text-white border-red-600 font-pixel text-xs px-4 py-2 mt-4"
+                      onClick={() => {
+                        if (confirm('Are you sure you want to sign out?')) {
+                          signOut();
+                        }
+                      }}
+                      whileHover={{ scale: 1.05, y: -2 }}
+                      whileTap={{ scale: 0.95, y: 0 }}
+                    >
+                      SIGN OUT
+                    </motion.button>
                   )}
                 </div>
 

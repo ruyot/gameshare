@@ -74,13 +74,13 @@ serve(async (req: Request) => {
           value: `
             <h2 style="color: #19FFE1;">You're on the GameShare Waitlist! 🎮</h2>
             <p>Thank you for joining the GameShare waitlist!</p>
-            <p>You're now in line for early access to the future of gaming entertainment.</p>
-            <p>We'll notify you as soon as GameShare launches!</p>
+            <p>You're now in line for early access to the future of entertainment and rewards.</p>
+            <p>We'll keep you posted.</p>
             <br>
-            <p style="color: #FF5C8D;">Happy Gaming!<br>The GameShare Team</p>
+            <p style="color: #FF5C8D;">Cheers,<br>Tahmeed - Founder of GameShare</p>
             <hr>
             <p style="font-size: 12px; color: #666;">
-              GameShare - The Airbnb for Gaming PCs<br>
+              GameShare - Entertainment for Everyone<br>
               <a href="https://gameshareit.com">gameshareit.com</a>
             </p>
           `
