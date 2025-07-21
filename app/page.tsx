@@ -150,32 +150,52 @@ export default function HomePage() {
             </Link>
 
             {/* Waitlist Button */}
-            <motion.button
-              onClick={() => {
-                const waitlistSection = document.querySelector('[data-waitlist-section]');
-                waitlistSection?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              className="font-pixel text-white text-sm hover:text-electric-teal transition-colors duration-300 flex items-center justify-center space-x-2 group"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            <motion.div
+              className="flex flex-col items-center space-y-2"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.8, delay: 3 }}
             >
-              <span>Join the waitlist</span>
+              <motion.button
+                onClick={() => {
+                  const waitlistSection = document.querySelector('[data-waitlist-section]');
+                  waitlistSection?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="font-pixel text-white text-xs hover:text-electric-teal transition-colors duration-300 flex items-center justify-center space-x-2 group"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <span>JOIN THE WAITLIST</span>
+                <motion.div
+                  className="w-1 h-1 bg-electric-teal rounded-full"
+                  animate={{ 
+                    scale: [1, 1.5, 1],
+                    opacity: [0.5, 1, 0.5]
+                  }}
+                  transition={{ 
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                />
+              </motion.button>
+              
+              {/* Down Arrow */}
               <motion.div
-                className="w-1 h-1 bg-electric-teal rounded-full"
+                className="text-white text-sm"
                 animate={{ 
-                  scale: [1, 1.5, 1],
-                  opacity: [0.5, 1, 0.5]
+                  y: [0, 5, 0],
+                  opacity: [0.7, 1, 0.7]
                 }}
                 transition={{ 
-                  duration: 2,
+                  duration: 1.5,
                   repeat: Infinity,
                   ease: "easeInOut"
                 }}
-              />
-            </motion.button>
+              >
+                ↓
+              </motion.div>
+            </motion.div>
           </motion.div>
         </motion.div>
       </section>
