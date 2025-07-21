@@ -12,21 +12,40 @@ export function WaitlistSection() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch('/api/waitlist-email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-    });
-    if (!res.ok) {
-      alert('Something went wrong. Please try again.');
+    
+    if (!email.trim()) {
+      alert('Please enter a valid email address.');
       return;
     }
-    setIsSubmitted(true);
-    setEmail('');
+
+    try {
+      // Use Supabase Edge Function instead of API route
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+
+      const { data, error } = await supabase.functions.invoke('send-waitlist', {
+        body: { email }
+      });
+
+      if (error) {
+        console.error('Edge Function error:', error);
+        alert('Something went wrong. Please try again.');
+        return;
+      }
+
+      setIsSubmitted(true);
+      setEmail('');
+    } catch (err) {
+      console.error('Waitlist submission error:', err);
+      alert('Something went wrong. Please try again.');
+    }
   };
 
   return (
-    <section className="relative py-32 neon-grid">
+    <section className="relative py-32 neon-grid" data-waitlist-section>
       <div className="max-w-4xl mx-auto px-4 text-center">
         <motion.div
           initial={{ opacity: 0, y: 50 }}

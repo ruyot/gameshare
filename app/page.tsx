@@ -122,7 +122,7 @@ export default function HomePage() {
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, delay: 2.5 }}
-            className="mt-12"
+            className="mt-12 space-y-4"
           >
             <Link href="/marketplace">
               <motion.button
@@ -148,6 +148,34 @@ export default function HomePage() {
                 </span>
               </motion.button>
             </Link>
+
+            {/* Waitlist Button */}
+            <motion.button
+              onClick={() => {
+                const waitlistSection = document.querySelector('[data-waitlist-section]');
+                waitlistSection?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="font-pixel text-white text-sm hover:text-electric-teal transition-colors duration-300 flex items-center justify-center space-x-2 group"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.8, delay: 3 }}
+            >
+              <span>Join the waitlist</span>
+              <motion.div
+                className="w-1 h-1 bg-electric-teal rounded-full"
+                animate={{ 
+                  scale: [1, 1.5, 1],
+                  opacity: [0.5, 1, 0.5]
+                }}
+                transition={{ 
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              />
+            </motion.button>
           </motion.div>
         </motion.div>
       </section>
