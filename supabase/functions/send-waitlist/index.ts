@@ -59,47 +59,91 @@ serve(async (req: Request) => {
       return new Response("Email service configuration error", { status: 500, headers: corsHeaders });
     }
 
-    // Send both user confirmation and admin notification in a single API call
-    const combinedPayload = {
+    // Send user confirmation email
+    const userPayload = {
       personalizations: [
-        // User confirmation email
         { 
           to: [{ email }],
-          subject: "You are on the GameShare Waitlist!",
-          dynamic_template_data: { user_email: email }
-        },
-        // Admin notification email
-        {
-          to: [{ email: "tahmeed@gameshareit.com" }],
-          subject: "New Waitlist Signup",
-          dynamic_template_data: { user_email: email }
+          subject: "🎮 Welcome to the GameShare Waitlist!"
         }
       ],
-      from: { email: "tahmeed@gameshareit.com", name: "GameShare It" },
+      from: { email: "tahmeed@gameshareit.com", name: "GameShare" },
       content: [
         {
-          type: "text/plain",
-          value: "Thank you for signing up for the GameShare waitlist! Stay tuned for the future of gaming entertainment."
+          type: "text/html",
+          value: `
+            <h2 style="color: #19FFE1;">You're on the GameShare Waitlist! 🎮</h2>
+            <p>Thank you for joining the GameShare waitlist!</p>
+            <p>You're now in line for early access to the future of gaming entertainment.</p>
+            <p>We'll notify you as soon as GameShare launches!</p>
+            <br>
+            <p style="color: #FF5C8D;">Happy Gaming!<br>The GameShare Team</p>
+            <hr>
+            <p style="font-size: 12px; color: #666;">
+              GameShare - The Airbnb for Gaming PCs<br>
+              <a href="https://gameshareit.com">gameshareit.com</a>
+            </p>
+          `
         }
       ]
     };
 
-    // Send both emails in a single API call
-    const emailRes = await fetch("https://api.sendgrid.com/v3/mail/send", {
+    // Send admin notification email
+    const adminPayload = {
+      personalizations: [
+        { 
+          to: [{ email: "tahmeed@gameshareit.com" }],
+          subject: "🔔 New GameShare Waitlist Signup"
+        }
+      ],
+      from: { email: "tahmeed@gameshareit.com", name: "GameShare Waitlist" },
+      content: [
+        {
+          type: "text/html",
+          value: `
+            <h3>New Waitlist Signup 📧</h3>
+            <p><strong>Email:</strong> ${email}</p>
+            <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
+            <hr>
+            <p>Another person joined the GameShare waitlist!</p>
+          `
+        }
+      ]
+    };
+
+    // Send user confirmation email
+    const userEmailRes = await fetch("https://api.sendgrid.com/v3/mail/send", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${SENDGRID_API_KEY}`,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify(combinedPayload)
+      body: JSON.stringify(userPayload)
     });
 
-    if (!emailRes.ok) {
-      const err = await emailRes.json().catch(() => ({}));
-      console.error("SendGrid combined email error:", err);
-      // Still return success since the email was saved to database
+    // Send admin notification email
+    const adminEmailRes = await fetch("https://api.sendgrid.com/v3/mail/send", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${SENDGRID_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(adminPayload)
+    });
+
+    // Log results
+    if (!userEmailRes.ok) {
+      const userErr = await userEmailRes.json().catch(() => ({}));
+      console.error("SendGrid user email error:", userErr);
     } else {
-      console.log(`Successfully sent emails for new waitlist signup: ${email}`);
+      console.log(`Successfully sent confirmation email to: ${email}`);
+    }
+
+    if (!adminEmailRes.ok) {
+      const adminErr = await adminEmailRes.json().catch(() => ({}));
+      console.error("SendGrid admin email error:", adminErr);
+    } else {
+      console.log(`Successfully sent admin notification for: ${email}`);
     }
 
     return new Response(
