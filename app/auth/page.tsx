@@ -115,21 +115,18 @@ function AuthPageInner() {
         email: registerData.email,
         password: registerData.password,
         options: {
-          data: { username: registerData.username }
+          data: { 
+            username: registerData.username,
+            full_name: registerData.username
+          }
         }
       })
 
       if (error) throw error
 
       if (data.user) {
-        try {
-          await createUserProfile(data.user.id, registerData.username, registerData.email)
-          setMessage('Registration successful! Please check your email to verify your account.')
-          setRegisterData({ email: '', password: '', confirmPassword: '', username: '' })
-        } catch (profileError) {
-          console.error('Profile creation failed:', profileError)
-          setError('Registration completed but profile setup failed. Please contact support.')
-        }
+        setMessage('Registration successful! Please check your email to verify your account.')
+        setRegisterData({ email: '', password: '', confirmPassword: '', username: '' })
       }
     } catch (err: any) {
       console.error('Registration error:', err)
@@ -139,44 +136,7 @@ function AuthPageInner() {
     }
   }
 
-  const createUserProfile = async (userId: string, username: string, email: string) => {
-    try {
-      // Create profile record
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert([{
-          id: userId,
-          username: username,
-          full_name: username,
-          avatar_url: null,
-        }])
 
-      if (profileError) {
-        console.error('Error creating profile:', profileError)
-        throw profileError
-      }
-
-      // Create User record with auth_user_id linking to auth.users
-      const { error: userError } = await supabase
-        .from('User')
-        .insert([{
-          auth_user_id: userId,
-          tokensBalance: 1000, // Give new users 1000 tokens to start
-        }])
-
-      if (userError) {
-        console.error('Error creating User record:', userError)
-        // If User creation fails, we should clean up the profile record
-        await supabase.from('profiles').delete().eq('id', userId)
-        throw userError
-      }
-
-      console.log('Successfully created both profile and User records')
-    } catch (err) {
-      console.error('User creation error:', err)
-      throw err
-    }
-  }
 
   if (user) {
     return (
