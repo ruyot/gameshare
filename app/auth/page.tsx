@@ -364,7 +364,7 @@ function AuthPageInner() {
                     whileHover={{ scale: 1.02, boxShadow: "0 0 30px rgba(25, 255, 225, 0.6)" }}
                     whileTap={{ scale: 0.98 }}
                   >
-                    <span className="flex items-center justify-center space-x-2">
+                    <span className="flex items-center justify-start space-x-2">
                       <Zap className="w-5 h-5" />
                       <span>{isLoading ? "CREATING..." : "JOIN THE REVOLUTION"}</span>
                     </span>
@@ -373,18 +373,18 @@ function AuthPageInner() {
               )}
             </AnimatePresence>
           </div>
-        </motion.div>
 
-        {/* Disclaimer at bottom */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 1.0 }}
-          className="text-center mt-8 relative z-10"
-        >
-          <p className="font-pixel text-white text-xs max-w-lg mx-auto leading-relaxed px-4">
-            DISCLAIMER: SIGN-UP IS CURRENTLY UNAVAILABLE UNTIL PRODUCT LAUNCH, JOIN OUR WAITLIST FOR UPDATES!
-          </p>
+          {/* Disclaimer at bottom */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 1.0 }}
+            className="text-center mt-8"
+          >
+            <p className="font-pixel text-white text-xs leading-relaxed">
+              DISCLAIMER: SIGN-UP IS CURRENTLY UNAVAILABLE UNTIL PRODUCT LAUNCH, JOIN OUR WAITLIST FOR UPDATES!
+            </p>
+          </motion.div>
         </motion.div>
       </div>
     </div>
