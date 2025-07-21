@@ -23,7 +23,7 @@ serve(async (req: Request) => {
       return new Response("Email is required", { status: 400, headers: corsHeaders });
     }
 
-    // Initialize Supabase client
+    // Initialize Supabase client (using built-in environment variables)
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);

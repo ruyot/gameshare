@@ -13,28 +13,35 @@ export function RetroNavigation() {
   const [username, setUsername] = useState('')
 
   useEffect(() => {
-    if (user) {
-      // Fetch real token balance and username from API
+    if (user && !loading) {
+      // Fetch real token balance and username from API only when authenticated
       fetchUserProfile()
     } else {
       // Show demo token count for non-authenticated users
       setTokenCount(500)
       setUsername('')
     }
-  }, [user])
+  }, [user, loading])
 
   const fetchUserProfile = async () => {
+    if (!user) return // Don't fetch if no user
+    
     try {
       const response = await fetch('/api/user/profile')
       if (response.ok) {
         const data = await response.json()
         setTokenCount(data.tokensBalance || 0)
         setUsername(data.username || 'PLAYER')
+      } else if (response.status === 401) {
+        // Handle unauthorized gracefully - user might not be fully authenticated yet
+        setUsername(user?.user_metadata?.username || 'PLAYER')
+        setTokenCount(0)
       }
     } catch (error) {
       console.error('Error fetching user profile:', error)
       // Fallback to user metadata
       setUsername(user?.user_metadata?.username || 'PLAYER')
+      setTokenCount(0)
     }
   }
 
