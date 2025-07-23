@@ -10,6 +10,7 @@ use warp::Filter;
 use futures_util::{SinkExt, StreamExt};
 
 use crate::error::GameShareError;
+use crate::host_session::HostSessionManager;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -64,12 +65,13 @@ pub struct SessionInfo {
 
 type Sessions = Arc<RwLock<HashMap<String, SessionInfo>>>;
 
-pub async fn start_server(addr: SocketAddr) -> Result<()> {
+pub async fn start_server(addr: SocketAddr, host_mgr: Arc<HostSessionManager>) -> Result<()> {
     let sessions: Sessions = Arc::new(RwLock::new(HashMap::new()));
 
     let signaling_route = warp::path("signaling")
         .and(warp::ws())
-        .and(with_sessions(sessions))
+        .and(with_sessions(sessions.clone()))
+        .and(warp::any().map(move || host_mgr.clone()))
         .and_then(handle_websocket);
 
     let health_route = warp::path("health")
@@ -101,11 +103,12 @@ fn with_sessions(sessions: Sessions) -> impl Filter<Extract = (Sessions,), Error
 async fn handle_websocket(
     ws: warp::ws::Ws,
     sessions: Sessions,
+    host_mgr: Arc<HostSessionManager>,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    Ok(ws.on_upgrade(move |socket| handle_client(socket, sessions)))
+    Ok(ws.on_upgrade(move |socket| handle_client(socket, sessions, host_mgr)))
 }
 
-async fn handle_client(ws: WebSocket, sessions: Sessions) {
+async fn handle_client(ws: WebSocket, sessions: Sessions, host_mgr: Arc<HostSessionManager>) {
     let (ws_tx, mut ws_rx) = ws.split();
     let (tx, mut rx) = mpsc::unbounded_channel::<SignalingMessage>();
 
@@ -141,6 +144,7 @@ async fn handle_client(ws: WebSocket, sessions: Sessions) {
                                 &sessions,
                                 &mut current_session_id,
                                 &mut client_type,
+                                host_mgr.clone()
                             ).await {
                                 error!("Error handling signaling message: {}", e);
                                 let error_msg = SignalingMessage::Error {
@@ -168,7 +172,7 @@ async fn handle_client(ws: WebSocket, sessions: Sessions) {
 
     // Clean up on disconnect
     if let (Some(session_id), Some(client_type)) = (current_session_id, client_type) {
-        cleanup_client(sessions, &session_id, &client_type).await;
+        cleanup_client(sessions.clone(), &session_id, &client_type).await;
     }
 }
 
@@ -178,6 +182,7 @@ async fn handle_signaling_message(
     sessions: &Sessions,
     current_session_id: &mut Option<String>,
     client_type: &mut Option<ClientType>,
+    host_mgr: Arc<HostSessionManager>,
 ) -> Result<()> {
     match msg {
         SignalingMessage::Join { session_id, client_type: ct } => {
@@ -205,8 +210,14 @@ async fn handle_signaling_message(
                 }
                 ClientType::Client => {
                     session.client_senders.push(tx.clone());
-                    info!("Client joined session: {} (total clients: {})", 
-                          session_id, session.client_senders.len());
+                    info!("Client joined session: {} (total clients: {})", session_id, session.client_senders.len());
+
+                    #[cfg(target_os="linux")]
+                    {
+                        let streamer = host_mgr.get_or_create(&session_id).await?;
+                        let offer_sdp = streamer.create_offer().await?;
+                        let _ = tx.send(SignalingMessage::Offer { sdp: offer_sdp, session_id: session_id.clone() });
+                    }
                 }
             }
         }
@@ -230,11 +241,17 @@ async fn handle_signaling_message(
             debug!("Received answer for session: {}", session_id);
             let sessions_lock = sessions.read().await;
             if let Some(session) = sessions_lock.get(&session_id) {
+                #[cfg(target_os="linux")]
+                {
+                    if let Ok(streamer) = host_mgr.get_or_create(&session_id).await {
+                        streamer.set_remote_description(&sdp, "answer").await?;
+                    }
+                }
+                let answer_msg = SignalingMessage::Answer {
+                    sdp,
+                    session_id,
+                };
                 if let Some(ref host_sender) = session.host_sender {
-                    let answer_msg = SignalingMessage::Answer {
-                        sdp,
-                        session_id,
-                    };
                     let _ = host_sender.send(answer_msg);
                 }
             }
@@ -249,6 +266,12 @@ async fn handle_signaling_message(
             debug!("Received ICE candidate for session: {}", session_id);
             let sessions_lock = sessions.read().await;
             if let Some(session) = sessions_lock.get(&session_id) {
+                #[cfg(target_os="linux")]
+                {
+                    if let Ok(streamer) = host_mgr.get_or_create(&session_id).await {
+                        streamer.add_ice_candidate(&candidate, sdp_mid.as_deref(), sdp_mline_index).await?;
+                    }
+                }
                 let ice_msg = SignalingMessage::IceCandidate {
                     candidate,
                     sdp_mid,

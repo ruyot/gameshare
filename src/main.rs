@@ -2,10 +2,12 @@ use anyhow::Result;
 use clap::Parser;
 use std::net::SocketAddr;
 use tracing::{info, warn};
+use std::sync::Arc;
 
 mod config;
 mod error;
 mod signaling;
+mod host_session;
 
 #[cfg(target_os = "linux")]
 mod capture;
@@ -81,7 +83,8 @@ async fn main() -> Result<()> {
     validate_system_requirements(&config).await?;
 
     // Start signaling server
-    let signaling_handle = tokio::spawn(signaling::start_server(config.signaling_addr));
+    let host_mgr = Arc::new(host_session::HostSessionManager::new(Arc::new(config.clone())));
+    let signaling_handle = tokio::spawn(signaling::start_server(config.signaling_addr, host_mgr));
 
     #[cfg(target_os = "linux")]
     {
