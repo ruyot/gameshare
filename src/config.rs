@@ -109,7 +109,13 @@ impl Config {
     pub fn load(config_path: &str, args: Args) -> Result<Self> {
         let mut config = if std::path::Path::new(config_path).exists() {
             let config_str = std::fs::read_to_string(config_path)?;
-            toml::from_str(&config_str)?
+            match toml::from_str::<Config>(&config_str) {
+                Ok(cfg) => cfg,
+                Err(e) => {
+                    eprintln!("Config parse warning: {e}. Falling back to defaults.");
+                    Config::default()
+                }
+            }
         } else {
             Self::default()
         };
