@@ -219,17 +219,19 @@ async fn handle_signaling_message(
 
                         // forward host ICE before we create offer so we don't miss early candidates
                         {
-                            let sig = tx.clone();
+                            let mut sig = tx.clone();
+                            let sid_for_ice = session_id.clone();
                             pc.on_ice_candidate(Box::new(move |cand| {
-                                let sig = sig.clone();
+                                let tx_clone = sig.clone();
+                                let sid = sid_for_ice.clone();
                                 Box::pin(async move {
                                     if let Some(c) = cand {
                                         if let Ok(json) = c.to_json() {
-                                            let _ = sig.send(SignalingMessage::IceCandidate {
+                                            let _ = tx_clone.send(SignalingMessage::IceCandidate {
                                                 candidate: json.candidate,
                                                 sdp_mid: json.sdp_mid,
                                                 sdp_mline_index: json.sdp_mline_index,
-                                                session_id: session_id.clone(),
+                                                session_id: sid,
                                             });
                                         }
                                     }
