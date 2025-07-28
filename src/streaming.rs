@@ -265,6 +265,11 @@ impl WebRTCStreamer {
     pub fn get_connection_state(&self) -> RTCPeerConnectionState {
         self.peer_connection.connection_state()
     }
+
+    /// Expose the inner RTCPeerConnection so signaling layer can add callbacks
+    pub fn peer_connection(&self) -> Arc<RTCPeerConnection> {
+        self.peer_connection.clone()
+    }
 }
 
 async fn handle_input_message(

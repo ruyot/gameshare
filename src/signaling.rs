@@ -215,6 +215,27 @@ async fn handle_signaling_message(
                     #[cfg(target_os="linux")]
                     {
                         let streamer = host_mgr.get_or_create(&session_id).await?;
+                        let pc       = streamer.peer_connection();
+
+                        // forward host ICE before we create offer so we don't miss early candidates
+                        {
+                            let sig = tx.clone();
+                            pc.on_ice_candidate(Box::new(move |cand| {
+                                let sig = sig.clone();
+                                Box::pin(async move {
+                                    if let Some(c) = cand {
+                                        let _ = sig.send(SignalingMessage::IceCandidate {
+                                            candidate: c.candidate,
+                                            sdp_mid: c.sdp_mid,
+                                            sdp_mline_index: c.sdp_mline_index,
+                                            session_id: session_id.clone(),
+                                        });
+                                    }
+                                })
+                            }));
+                        }
+
+                        // now create and send offer
                         let offer_sdp = streamer.create_offer().await?;
                         let _ = tx.send(SignalingMessage::Offer { sdp: offer_sdp, session_id: session_id.clone() });
                     }
