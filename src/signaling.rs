@@ -224,7 +224,7 @@ async fn handle_signaling_message(
                                 let sig = sig.clone();
                                 Box::pin(async move {
                                     if let Some(c) = cand {
-                                        if let Ok(json) = c.to_json().await {
+                                        if let Ok(json) = c.to_json() {
                                             let _ = sig.send(SignalingMessage::IceCandidate {
                                                 candidate: json.candidate,
                                                 sdp_mid: json.sdp_mid,
