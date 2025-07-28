@@ -224,12 +224,14 @@ async fn handle_signaling_message(
                                 let sig = sig.clone();
                                 Box::pin(async move {
                                     if let Some(c) = cand {
-                                        let _ = sig.send(SignalingMessage::IceCandidate {
-                                            candidate: c.candidate,
-                                            sdp_mid: c.sdp_mid,
-                                            sdp_mline_index: c.sdp_mline_index,
-                                            session_id: session_id.clone(),
-                                        });
+                                        if let Ok(json) = c.to_json().await {
+                                            let _ = sig.send(SignalingMessage::IceCandidate {
+                                                candidate: json.candidate,
+                                                sdp_mid: json.sdp_mid,
+                                                sdp_mline_index: json.sdp_mline_index,
+                                                session_id: session_id.clone(),
+                                            });
+                                        }
                                     }
                                 })
                             }));
