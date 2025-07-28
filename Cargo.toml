@@ -34,6 +34,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 anyhow = "1.0"
 thiserror = "1.0"
 
+# Async trait helper (needed by webrtc_helper Signaler/Nego traits)
+async-trait = "0.1"
+
 # Configuration
 clap = { version = "4.0", features = ["derive"] }
 config = "0.13"
