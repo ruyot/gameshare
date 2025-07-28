@@ -40,7 +40,7 @@ class GameShareClient {
         document.addEventListener('mousemove', (e) => this.handleMouseMove(e));
         document.addEventListener('mousedown', (e) => this.handleMouseDown(e));
         document.addEventListener('mouseup', (e) => this.handleMouseUp(e));
-        document.addEventListener('wheel', (e) => this.handleMouseWheel(e));
+        document.addEventListener('wheel', (e) => this.handleMouseWheel(e), { passive: false });
         
         // Pointer lock events
         document.addEventListener('pointerlockchange', () => {

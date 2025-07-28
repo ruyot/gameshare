@@ -228,11 +228,12 @@ async fn handle_signaling_message(
                                     if let Some(c) = cand {
                                         if let Ok(json) = c.to_json() {
                                             let _ = tx_clone.send(SignalingMessage::IceCandidate {
-                                                candidate: json.candidate,
-                                                sdp_mid: json.sdp_mid,
+                                                candidate: json.candidate.clone(),
+                                                sdp_mid: json.sdp_mid.clone(),
                                                 sdp_mline_index: json.sdp_mline_index,
                                                 session_id: sid,
                                             });
+                                            debug!("HOST ICE {}", json.candidate);
                                         }
                                     }
                                 })

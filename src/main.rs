@@ -69,7 +69,8 @@ async fn main() -> Result<()> {
     let log_level = if args.verbose { "debug" } else { "info" };
     tracing_subscriber::fmt()
         .with_env_filter(
-            tracing_subscriber::EnvFilter::new(format!("gameshare_cloud_backend={}", log_level))
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(format!("gameshare_cloud_backend={}", log_level)))
         )
         .init();
 
