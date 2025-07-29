@@ -293,29 +293,14 @@ async fn handle_input_message(
 async fn send_video_frame(
     track: &Arc<TrackLocalStaticRTP>,
     frame: EncodedFrame,
-    pts: u64,
+    _pts: u64,
 ) -> Result<()> {
-    // Calculate timestamp (90kHz clock for H.264)
-    let timestamp = pts * 90000 / 30; // Assuming 30 FPS
+    // Using TrackLocalStaticRTP::write ensures the library handles RTP
+    // packetization (fragmentation, sequencing, timestamps, SSRC, etc.) for us.
+    // This prevents oversized UDP packets that would otherwise be dropped and
+    // result in the client receiving no media.
 
-    // Send the frame
-    track.write_rtp(&webrtc::rtp::packet::Packet {
-        header: webrtc::rtp::header::Header {
-            version: 2,
-            padding: false,
-            extension: false,
-            marker: frame.is_keyframe,
-            payload_type: 96, // H.264 payload type
-            sequence_number: (pts % 65536) as u16,
-            timestamp: timestamp as u32,
-            ssrc: 0, // Will be set by WebRTC
-            csrc: vec![],
-            extension_profile: 0,
-            extensions: vec![],
-            extensions_padding: 0,
-        },
-        payload: frame.data.into(),
-    }).await?;
+    track.write(&frame.data).await?;
 
     Ok(())
 }
