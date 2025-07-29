@@ -149,7 +149,8 @@ impl WebRTCStreamer {
         ).await?;
 
         let input_handler = Arc::new(RwLock::new(input_handler));
-        let (frame_sender, mut frame_receiver) = mpsc::channel(100);
+        // Explicitly type the channel so the compiler doesn’t have to infer `T`.
+        let (frame_sender, mut frame_receiver) = mpsc::channel::<EncodedFrame>(100);
 
         // Setup data channel event handlers
         let input_handler_clone = input_handler.clone();
