@@ -12,8 +12,11 @@ use webrtc::peer_connection::configuration::RTCConfiguration;
 use webrtc::peer_connection::peer_connection_state::RTCPeerConnectionState;
 use webrtc::peer_connection::RTCPeerConnection;
 use webrtc::rtp_transceiver::rtp_codec::{RTCRtpCodecCapability, RTCRtpCodecParameters, RTPCodecType};
+use webrtc::track::track_local::TrackLocal;
 use webrtc::track::track_local::track_local_static_rtp::TrackLocalStaticRTP;
-use webrtc::track::track_local::{TrackLocal, TrackLocalWriter};
+use webrtc::track::track_local::track_local_static_sample::TrackLocalStaticSample;
+use webrtc::media::Sample;
+use std::time::Duration;
 
 use crate::config::Config;
 use crate::encoding::EncodedFrame;
@@ -23,7 +26,7 @@ use crate::input::{GameInputEvent, InputHandler};
 pub struct WebRTCStreamer {
     config: Arc<Config>,
     peer_connection: Arc<RTCPeerConnection>,
-    video_track: Arc<TrackLocalStaticRTP>,
+    video_track: Arc<TrackLocalStaticSample>,
     audio_track: Option<Arc<TrackLocalStaticRTP>>,
     data_channel: Arc<RTCDataChannel>,
     input_handler: Arc<RwLock<InputHandler>>,
@@ -101,7 +104,7 @@ impl WebRTCStreamer {
         let peer_connection = Arc::new(api.new_peer_connection(rtc_config).await?);
 
         // Create video track
-        let video_track = Arc::new(TrackLocalStaticRTP::new(
+        let video_track = Arc::new(TrackLocalStaticSample::new(
             RTCRtpCodecCapability {
                 mime_type: MIME_TYPE_H264.to_owned(),
                 clock_rate: 90000,
@@ -192,7 +195,13 @@ impl WebRTCStreamer {
         tokio::spawn(async move {
             let mut pts = 0u64;
             while let Some(frame) = frame_receiver.recv().await {
-                if let Err(e) = send_video_frame(&video_track_clone, frame, pts).await {
+                let sample = Sample {
+                    data: frame.data,
+                    // 30 fps ⇒ 33 ms between frames
+                    duration: Duration::from_millis(33),
+                    ..Default::default()
+                };
+                if let Err(e) = video_track_clone.write_sample(&sample).await {
                     error!("Error sending video frame: {}", e);
                 }
                 pts += 1;
@@ -286,21 +295,6 @@ async fn handle_input_message(
 
     let mut handler = input_handler.write().await;
     handler.handle_input_event(input_event).await?;
-
-    Ok(())
-}
-
-async fn send_video_frame(
-    track: &Arc<TrackLocalStaticRTP>,
-    frame: EncodedFrame,
-    _pts: u64,
-) -> Result<()> {
-    // Using TrackLocalStaticRTP::write ensures the library handles RTP
-    // packetization (fragmentation, sequencing, timestamps, SSRC, etc.) for us.
-    // This prevents oversized UDP packets that would otherwise be dropped and
-    // result in the client receiving no media.
-
-    track.write(&frame.data).await?;
 
     Ok(())
 }
