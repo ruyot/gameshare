@@ -1,4 +1,4 @@
-signaling_addr = "127.0.0.1:8080"
+signaling_addr = "127.0.0.1:8111"
 
 [video]
 target_framerate = 30
