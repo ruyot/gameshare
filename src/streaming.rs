@@ -16,6 +16,7 @@ use webrtc::track::track_local::TrackLocal;
 use webrtc::track::track_local::track_local_static_rtp::TrackLocalStaticRTP;
 use webrtc::track::track_local::track_local_static_sample::TrackLocalStaticSample;
 use webrtc::media::Sample;
+use bytes::Bytes;
 use std::time::Duration;
 
 use crate::config::Config;
@@ -197,7 +198,7 @@ impl WebRTCStreamer {
             let mut pts = 0u64;
             while let Some(frame) = frame_receiver.recv().await {
                 let sample = Sample {
-                    data: frame.data,
+                    data: Bytes::from(frame.data),
                     // 30 fps ⇒ 33 ms between frames
                     duration: Duration::from_millis(33),
                     ..Default::default()
