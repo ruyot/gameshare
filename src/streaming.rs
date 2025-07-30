@@ -5,6 +5,8 @@ use tracing::{debug, error, info, warn};
 use webrtc::api::interceptor_registry::register_default_interceptors;
 use webrtc::api::media_engine::{MediaEngine, MIME_TYPE_H264, MIME_TYPE_OPUS};
 use webrtc::api::APIBuilder;
+use webrtc::api::setting_engine::SettingEngine;
+use webrtc::network_type::NetworkType;
 use webrtc::data_channel::data_channel_message::DataChannelMessage;
 use webrtc::data_channel::RTCDataChannel;
 use webrtc::ice_transport::ice_server::RTCIceServer;
@@ -75,13 +77,23 @@ impl WebRTCStreamer {
             )?;
         }
 
-        // Create API
+        // Create API – allow both UDP and TCP candidates so we can fall back when UDP is blocked.
         let interceptor_registry = webrtc::interceptor::registry::Registry::new();
         let mut interceptor_registry = register_default_interceptors(interceptor_registry, &mut media_engine)?;
+
+        // Setting-engine tweak ➜ enable ICE-TCP alongside UDP. This gives us a graceful
+        // fallback path for restrictive networks / corporate Wi-Fi where UDP 3478/10000 is blocked.
+        let mut setting_engine = SettingEngine::default();
+        setting_engine.set_network_types(vec![
+            NetworkType::Udp4,
+            NetworkType::Tcp4,
+            NetworkType::Tcp4Tls,
+        ]);
 
         let api = APIBuilder::new()
             .with_media_engine(media_engine)
             .with_interceptor_registry(interceptor_registry)
+            .with_setting_engine(setting_engine)
             .build();
 
         // Create ICE servers from config
