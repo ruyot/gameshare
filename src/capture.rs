@@ -203,30 +203,41 @@ impl CaptureSystem {
 
         let frame_size = (config.resolution.width * config.resolution.height * 3) as usize; // BGR24
         let mut buffer = vec![0u8; frame_size];
+        let mut read_buffer = vec![0u8; 65536]; // 64KB read buffer
+        let mut bytes_read_total = 0usize;
 
         loop {
-            match stdout.read(&mut buffer).await {
-                Ok(bytes_read) if bytes_read == frame_size => {
-                    let frame = Frame {
-                        data: buffer.clone(),
-                        width: config.resolution.width,
-                        height: config.resolution.height,
-                        format: PixelFormat::Bgr24,
-                        timestamp: std::time::Instant::now(),
-                    };
-
-                    if tx.send(frame).await.is_err() {
-                        debug!("Frame receiver dropped, stopping capture");
-                        break;
-                    }
-                }
+            // Read into our temporary buffer
+            match stdout.read(&mut read_buffer).await {
                 Ok(0) => {
                     debug!("FFmpeg output stream ended");
                     break;
                 }
                 Ok(bytes_read) => {
-                    warn!("Partial frame read: {} bytes, expected {}", bytes_read, frame_size);
-                    // Continue reading, this might happen due to buffering
+                    // Copy bytes to frame buffer
+                    let bytes_to_copy = std::cmp::min(bytes_read, frame_size - bytes_read_total);
+                    buffer[bytes_read_total..bytes_read_total + bytes_to_copy]
+                        .copy_from_slice(&read_buffer[..bytes_to_copy]);
+                    bytes_read_total += bytes_to_copy;
+
+                    // Check if we have a complete frame
+                    if bytes_read_total >= frame_size {
+                        let frame = Frame {
+                            data: buffer.clone(),
+                            width: config.resolution.width,
+                            height: config.resolution.height,
+                            format: PixelFormat::Bgr24,
+                            timestamp: std::time::Instant::now(),
+                        };
+
+                        if tx.send(frame).await.is_err() {
+                            debug!("Frame receiver dropped, stopping capture");
+                            break;
+                        }
+
+                        // Reset for next frame
+                        bytes_read_total = 0;
+                    }
                 }
                 Err(e) => {
                     error!("Error reading frame from FFmpeg: {}", e);
