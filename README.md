@@ -1,108 +1,119 @@
-# GameShare Client Components
+# GameShare Remote Client & Signaling Server
 
-This repository contains the client-side components for GameShare, a decentralized P2P cloud gaming platform. The backend WebRTC implementation is maintained in a separate repository.
-
-## Components
-
-### Local Client (`client/`)
-The original GameShare client that connects to a local signaling server.
-
-- **`index.html`**: Full-featured web interface with connection controls, performance stats, and game input handling
-- **`client.js`**: WebRTC client implementation with input event handling and performance monitoring
-
-### Remote Client (`client/remote/`)
-Split-architecture client and signaling server for production deployments.
-
-- **`index.html`**: Minimal client page for remote connections
-- **`client.js`**: Remote client that connects to external signaling servers
-- **`server.js`**: Express.js + WebSocket signaling server
-- **`package.json`**: Node.js dependencies for the remote server
-- **`README.md`**: Deployment and usage instructions
-
-## Quick Start
-
-### Local Development
-
-1. **Start the remote signaling server:**
-   ```bash
-   cd client/remote
-   npm install
-   npm start
-   ```
-
-2. **Connect to the server:**
-   - Open `http://localhost:3000` in your browser
-   - The client will automatically connect to the local signaling server
-
-### Deployment
-
-The remote client can be deployed to various cloud platforms:
-
-```bash
-cd client/remote
-
-# Deploy to Fly.io
-fly launch
-fly deploy
-
-# Deploy to Railway
-railway init
-railway up
-
-# Deploy to Vercel
-vercel
-```
+This repository contains the split-architecture components for GameShare, allowing the host to run locally while clients connect through a remote signaling server.
 
 ## Architecture
 
-- **Local Client**: Full-featured interface for development and testing
-- **Remote Client**: Minimal interface for production deployments
-- **Remote Server**: Node.js signaling server for WebRTC coordination
+- **Local Host**: Runs `gameshare-host` with `--remote-signaling-url` pointing to the remote server
+- **Remote Server**: Node.js Express server with WebSocket signaling
+- **Remote Client**: Browser-based client that connects to the remote server
+
+## Deployment
+
+### Option 1: Deploy to Fly.io
+
+1. Install Fly CLI: https://fly.io/docs/hands-on/install-flyctl/
+2. Login: `fly auth login`
+3. Deploy:
+   ```bash
+   fly launch
+   fly deploy
+   ```
+
+### Option 2: Deploy to Railway
+
+1. Install Railway CLI: `npm i -g @railway/cli`
+2. Login: `railway login`
+3. Deploy:
+   ```bash
+   railway init
+   railway up
+   ```
+
+### Option 3: Deploy to Vercel
+
+1. Install Vercel CLI: `npm i -g vercel`
+2. Deploy:
+   ```bash
+   vercel
+   ```
+
+**Note**: This is an Express.js application, not a Next.js app. Next.js is included as a dependency to satisfy Vercel's detection, but the actual server is Express.js with WebSocket signaling. The `vercel.json` configuration ensures proper deployment.
+
+## Usage
+
+### Starting the Host
+
+```bash
+# Connect to remote signaling server
+./gameshare-host --remote-signaling-url wss://your-server.com
+
+# Or with a specific session ID
+./gameshare-host --remote-signaling-url wss://your-server.com --session-id my-game-session
+```
+
+### Connecting Clients
+
+Clients can connect by visiting:
+```
+https://your-server.com/?session=my-game-session&signaling=wss://your-server.com
+```
+
+Or simply:
+```
+https://your-server.com/?session=my-game-session
+```
+
+## Environment Variables
+
+- `PORT`: Server port (default: 3000)
+- `HOST`: Server host (default: 0.0.0.0)
+
+## API Endpoints
+
+- `GET /`: Main client page
+- `GET /health`: Health check
+- `GET /sessions`: List active sessions
+- `WS /`: WebSocket signaling endpoint
+
+## Development
+
+```bash
+npm install
+npm run dev
+```
+
+The server will be available at `http://localhost:3000`
 
 ## File Structure
 
 ```
-client/
-├── index.html          # Local client interface
-├── client.js           # Local client logic
-└── remote/             # Remote client components
-    ├── index.html      # Remote client interface
-    ├── client.js       # Remote client logic
-    ├── server.js       # Signaling server
-    ├── package.json    # Dependencies
-    ├── README.md       # Documentation
-    ├── deploy.sh       # Linux deployment script
-    └── deploy.bat      # Windows deployment script
+/
+├── index.html          # Minimal client page
+├── client.js           # Remote client logic
+├── server.js           # Express + WebSocket server
+├── package.json        # Node.js dependencies
+├── vercel.json         # Vercel deployment configuration
+├── next.config.js      # Next.js config (for Vercel compatibility)
+├── .vercelignore       # Vercel ignore file
+├── deploy.sh           # Linux deployment script
+├── deploy.bat          # Windows deployment script
+└── README.md          # This file
 ```
 
-## Usage
+## Vercel Configuration
 
-### Local Development
-```bash
-# Start remote signaling server
-cd client/remote
-npm start
+The `vercel.json` file configures:
+- **WebSocket Routing**: `/signaling` endpoint routes to `server.js` for WebSocket connections
+- **Static File Serving**: `/` serves `index.html` and `/client.js` serves the client script
+- **Separated Builds**: Static files use `@vercel/static`, server uses `@vercel/node`
+- **Function Settings**: 30-second timeout for serverless functions
 
-# Access client
-open http://localhost:3000
-```
+This configuration provides better performance and easier debugging by separating static hosting from server logic.
 
-### Production Deployment
-1. Deploy the remote server to your preferred platform
-2. Share the URL with users: `https://your-server.com/?session=game-session`
-3. Users can connect directly without any setup
+## Security Notes
 
-## Features
-
-- **WebRTC Integration**: Direct peer-to-peer connections
-- **Input Handling**: Mouse and keyboard event capture
-- **Performance Monitoring**: Real-time stats display
-- **Responsive Design**: Works on desktop and mobile
-- **Cross-Platform**: Deployable to any cloud platform
-
-## Security
-
+- The signaling server is stateless and doesn't store sensitive data
 - WebRTC connections are peer-to-peer and don't go through the server
-- The signaling server only coordinates connection establishment
-- No sensitive data is stored on the server
+- Consider adding authentication if needed for production use
 
