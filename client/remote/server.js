@@ -11,6 +11,7 @@ const server = http.createServer(app);
 app.use(cors());
 
 // Serve static files from the current directory
+// Note: In Vercel deployment, static files are served by Vercel's static hosting
 app.use(express.static(__dirname));
 
 // WebSocket server for signaling

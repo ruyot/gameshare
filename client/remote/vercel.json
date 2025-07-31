@@ -4,6 +4,14 @@
     {
       "src": "server.js",
       "use": "@vercel/node"
+    },
+    {
+      "src": "index.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "client.js",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
@@ -12,8 +20,12 @@
       "dest": "/server.js"
     },
     {
-      "src": "/(.*)",
-      "dest": "/server.js"
+      "src": "/",
+      "dest": "/index.html"
+    },
+    {
+      "src": "/client.js",
+      "dest": "/client.js"
     }
   ],
   "functions": {

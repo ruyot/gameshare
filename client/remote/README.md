@@ -105,9 +105,12 @@ client/remote/
 ## Vercel Configuration
 
 The `vercel.json` file configures:
-- **WebSocket Routing**: `/signaling` endpoint routes to `server.js`
-- **Static File Serving**: All other routes serve `index.html`
+- **WebSocket Routing**: `/signaling` endpoint routes to `server.js` for WebSocket connections
+- **Static File Serving**: `/` serves `index.html` and `/client.js` serves the client script
+- **Separated Builds**: Static files use `@vercel/static`, server uses `@vercel/node`
 - **Function Settings**: 30-second timeout for serverless functions
+
+This configuration provides better performance and easier debugging by separating static hosting from server logic.
 
 ## Security Notes
 
