@@ -9,9 +9,9 @@
     "vercel-build": "echo 'Express.js server - no build step required'"
   },
   "dependencies": {
+    "cors": "^2.8.5",
     "express": "^4.18.2",
-    "ws": "^8.14.2",
-    "cors": "^2.8.5"
+    "ws": "^8.14.2"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
@@ -19,4 +19,4 @@
   "engines": {
     "node": ">=16.0.0"
   }
-} 
+}
