@@ -5,8 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js",
-    "vercel-build": "echo 'Express.js server - no build step required'"
+    "dev": "nodemon server.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

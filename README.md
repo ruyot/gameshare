@@ -38,7 +38,7 @@ This repository contains the split-architecture components for GameShare, allowi
    vercel
    ```
 
-**Note**: This is an Express.js application, not a Next.js app. Next.js is included as a dependency to satisfy Vercel's detection, but the actual server is Express.js with WebSocket signaling. The `vercel.json` configuration ensures proper deployment.
+**Note**: This is a pure Express.js application with WebSocket signaling. The `vercel.json` configuration ensures proper deployment.
 
 ## Usage
 
@@ -94,7 +94,6 @@ The server will be available at `http://localhost:3000`
 ├── server.js           # Express + WebSocket server
 ├── package.json        # Node.js dependencies
 ├── vercel.json         # Vercel deployment configuration
-├── next.config.js      # Next.js config (for Vercel compatibility)
 ├── .vercelignore       # Vercel ignore file
 ├── deploy.sh           # Linux deployment script
 ├── deploy.bat          # Windows deployment script
@@ -105,11 +104,10 @@ The server will be available at `http://localhost:3000`
 
 The `vercel.json` file configures:
 - **WebSocket Routing**: `/signaling` endpoint routes to `server.js` for WebSocket connections
-- **Static File Serving**: `/` serves `index.html` and `/client.js` serves the client script
-- **Separated Builds**: Static files use `@vercel/static`, server uses `@vercel/node`
+- **Static File Serving**: All routes serve through `server.js` which handles both API and static files
 - **Function Settings**: 30-second timeout for serverless functions
 
-This configuration provides better performance and easier debugging by separating static hosting from server logic.
+This is a pure Express.js application that serves both the API and static files.
 
 ## Security Notes
 
