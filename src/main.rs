@@ -1,12 +1,15 @@
 use anyhow::Result;
 use clap::Parser;
 use std::net::SocketAddr;
-use tracing::{info, warn};
+use tracing::{info, error};
 use std::sync::Arc;
+use tokio::sync::mpsc;
 
 mod config;
 mod error;
 mod signaling;
+mod remote_signaling;
+mod webrtc_helper;
 mod host_session;
 
 #[cfg(target_os = "linux")]
@@ -36,9 +39,13 @@ struct Args {
     #[arg(short, long)]
     process_name: Option<String>,
 
-    /// Signaling server address
+    /// Signaling server address (local)
     #[arg(short, long, default_value = "127.0.0.1:8080")]
     signaling_addr: SocketAddr,
+
+    /// Remote signaling server URL (for split architecture)
+    #[arg(long)]
+    remote_signaling_url: Option<String>,
 
     /// Enable hardware encoding (NVENC)
     #[arg(long)]
@@ -83,9 +90,46 @@ async fn main() -> Result<()> {
     // Validate system requirements
     validate_system_requirements(&config).await?;
 
-    // Start signaling server
+    // Initialize host session manager
     let host_mgr = Arc::new(host_session::HostSessionManager::new(Arc::new(config.clone())));
-    let signaling_handle = tokio::spawn(signaling::start_server(config.signaling_addr, host_mgr));
+    
+    // Handle signaling based on configuration
+    let signaling_handle = if let Some(remote_url) = &args.remote_signaling_url {
+        // Remote signaling mode
+        info!("Using remote signaling server: {}", remote_url);
+        
+        // Generate a session ID (you could make this configurable)
+        let session_id = format!("session-{}", uuid::Uuid::new_v4().simple());
+        info!("Session ID: {}", session_id);
+        
+        // Create remote signaling client
+        let (incoming_tx, incoming_rx) = mpsc::unbounded_channel();
+        let (outgoing_tx, outgoing_rx) = mpsc::unbounded_channel();
+        
+        let mut remote_client = remote_signaling::RemoteSignalingClient::new(
+            session_id.clone(),
+            incoming_rx,
+            outgoing_tx,
+        );
+        
+        // Connect to remote server
+        remote_client.connect(remote_url).await?;
+        
+        // Spawn the remote signaling client
+        tokio::spawn(async move {
+            if let Err(e) = remote_client.run().await {
+                error!("Remote signaling client error: {}", e);
+            }
+        })
+    } else {
+        // Local signaling mode
+        info!("Using local signaling server on {}", config.signaling_addr);
+        tokio::spawn(async move {
+            if let Err(e) = signaling::start_server(config.signaling_addr, host_mgr).await {
+                error!("Local signaling server error: {}", e);
+            }
+        })
+    };
 
     #[cfg(target_os = "linux")]
     {

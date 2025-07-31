@@ -5,14 +5,10 @@ use serde::{Deserialize, Serialize};
 use async_trait::async_trait;
 use std::sync::Arc;
 use webrtc::{
-    peer_connection::peer_connection_state::RTCPeerConnectionState,
     peer_connection::sdp::session_description::RTCSessionDescription,
     rtp_transceiver::rtp_codec::RTCRtpCodecCapability,
-    rtp_transceiver::rtp_codec::RTCRtpCodecParameters,
-    rtp_transceiver::RTPCodecType,
     track::track_local::track_local_static_rtp::TrackLocalStaticRTP,
-    track::{track_local::TrackLocalWriter, track_remote::TrackRemote},
-    rtp_transceiver::rtp_transceiver_direction::RTCRtpTransceiverDirection,
+    track::track_remote::TrackRemote,
     rtp_transceiver::RTCRtpTransceiver,
     rtp_receiver::RTCRtpReceiver,
     ice_transport::ice_connection_state::IceConnectionState,
@@ -129,14 +125,14 @@ impl<S: Signaler> Negotiator<S> {
         Ok(())
     }
 
-    async fn on_offer(&mut self, sdp: String) -> anyhow::Result<()> {
+    async fn on_offer(&mut self, sdp: String) -> anyhow::Result<()> where S::Error: std::error::Error {
         let offer = RTCSessionDescription::offer(sdp);
         let collision = !self.polite && (self.making_offer || self.pc.signaling_state() != webrtc::peer_connection::signaling_state::RTCSignalingState::Stable);
         if collision {
             // Discard offer politely
             return Ok(());
         }
-        self.pc.set_remote_description(offer).await?;
+        self.pc.set_remote_description(offer?).await?;
         let answer = self.pc.create_answer(None).await?;
         self.pc.set_local_description(answer.clone()).await?;
         self.signaler.send(Message::Answer { sdp: answer.sdp }).await?;
@@ -145,7 +141,7 @@ impl<S: Signaler> Negotiator<S> {
 
     async fn on_answer(&mut self, sdp: String) -> anyhow::Result<()> {
         let ans = RTCSessionDescription::answer(sdp);
-        self.pc.set_remote_description(ans).await?;
+        self.pc.set_remote_description(ans?).await?;
         Ok(())
     }
 } 
