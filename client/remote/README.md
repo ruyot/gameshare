@@ -41,7 +41,7 @@ This directory contains the split-architecture components for GameShare, allowin
    vercel
    ```
 
-**Note**: This is an Express.js application, not a Next.js app. The `vercel.json` configuration ensures proper deployment.
+**Note**: This is an Express.js application, not a Next.js app. Next.js is included as a dependency to satisfy Vercel's detection, but the actual server is Express.js with WebSocket signaling. The `vercel.json` configuration ensures proper deployment.
 
 ## Usage
 
@@ -98,6 +98,7 @@ client/remote/
 ├── server.js           # Express + WebSocket server
 ├── package.json        # Node.js dependencies
 ├── vercel.json         # Vercel deployment configuration
+├── next.config.js      # Next.js config (for Vercel compatibility)
 ├── .vercelignore       # Vercel ignore file
 └── README.md          # This file
 ```
