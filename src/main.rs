@@ -202,7 +202,7 @@ async fn validate_system_requirements(_config: &Config) -> Result<()> {
     #[cfg(target_os = "linux")]
     {
         // Check for hardware encoding support if requested
-        if config.use_nvenc {
+        if _config.use_nvenc {
             if !encoding::check_nvenc_support().await? {
                 warn!("NVENC not available, falling back to x264 software encoding");
             }
