@@ -7,6 +7,7 @@ use {
     anyhow::Result,
     std::{collections::HashMap, sync::Arc},
     tokio::sync::Mutex,
+    tracing::{info, error},
 };
 
 #[cfg(target_os = "linux")]
@@ -33,6 +34,46 @@ impl HostSessionManager {
         guard.insert(session_id.to_owned(), streamer.clone());
         Ok(streamer)
     }
+
+    /// Handle signaling messages from remote clients
+    pub async fn handle_signaling_message(self: &Arc<Self>, msg: crate::signaling::SignalingMessage) -> Result<()> {
+        match msg {
+            crate::signaling::SignalingMessage::Offer { sdp, session_id } => {
+                info!("Received offer for session: {}", session_id);
+                let streamer = self.get_or_create(&session_id).await?;
+                streamer.set_remote_description(&sdp, "offer").await?;
+                
+                // Create and send answer
+                let answer_sdp = streamer.create_answer().await?;
+                // Note: In remote mode, we would need to send this back through the remote signaling client
+                // For now, we'll just log it
+                info!("Created answer SDP for session: {}", session_id);
+            }
+            crate::signaling::SignalingMessage::Answer { sdp, session_id } => {
+                info!("Received answer for session: {}", session_id);
+                let streamer = self.get_or_create(&session_id).await?;
+                streamer.set_remote_description(&sdp, "answer").await?;
+            }
+            crate::signaling::SignalingMessage::IceCandidate { candidate, sdp_mid, sdp_mline_index, session_id } => {
+                info!("Received ICE candidate for session: {}", session_id);
+                let streamer = self.get_or_create(&session_id).await?;
+                streamer.add_ice_candidate(&candidate, sdp_mid, sdp_mline_index).await?;
+            }
+            crate::signaling::SignalingMessage::Join { session_id, client_type } => {
+                info!("Client joined session: {} as {:?}", session_id, client_type);
+                // Create streamer for the session
+                self.get_or_create(&session_id).await?;
+            }
+            crate::signaling::SignalingMessage::Leave { session_id } => {
+                info!("Client left session: {}", session_id);
+                // Could clean up the session here if needed
+            }
+            crate::signaling::SignalingMessage::Error { message } => {
+                error!("Signaling error: {}", message);
+            }
+        }
+        Ok(())
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -46,4 +87,10 @@ pub struct HostSessionManager;
 #[cfg(not(target_os = "linux"))]
 impl HostSessionManager {
     pub fn new(_cfg: Arc<Config>) -> Self { HostSessionManager }
+    
+    /// Handle signaling messages from remote clients (stub for non-Linux)
+    pub async fn handle_signaling_message(self: &Arc<Self>, _msg: crate::signaling::SignalingMessage) -> anyhow::Result<()> {
+        // Stub implementation for non-Linux platforms
+        Ok(())
+    }
 } 

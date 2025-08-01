@@ -1,12 +1,13 @@
 use anyhow::Result;
 use clap::Parser;
 use std::net::SocketAddr;
-use tracing::{info, warn};
+use tracing::{info, error};
 use std::sync::Arc;
 
 mod config;
 mod error;
 mod signaling;
+mod remote_signaling;
 mod host_session;
 
 #[cfg(target_os = "linux")]
@@ -20,7 +21,7 @@ mod streaming;
 
 use crate::config::Config;
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
 #[command(name = "gameshare-host")]
 #[command(about = "GameShare P2P Cloud Gaming Host Agent")]
 struct Args {
@@ -36,9 +37,13 @@ struct Args {
     #[arg(short, long)]
     process_name: Option<String>,
 
-    /// Signaling server address
+    /// Signaling server address (for local server mode)
     #[arg(short, long, default_value = "127.0.0.1:8080")]
     signaling_addr: SocketAddr,
+
+    /// Remote signaling server URL (for remote mode)
+    #[arg(long)]
+    remote_signaling_url: Option<String>,
 
     /// Enable hardware encoding (NVENC)
     #[arg(long)]
@@ -77,15 +82,34 @@ async fn main() -> Result<()> {
     info!("Starting GameShare Host Agent v{}", env!("CARGO_PKG_VERSION"));
 
     // Load configuration
-    let config = Config::load(&args.config.clone(), args)?;
+    let config = Config::load(&args.config.clone(), args.clone())?;
     info!("Configuration loaded: {:?}", config);
 
     // Validate system requirements
     validate_system_requirements(&config).await?;
 
-    // Start signaling server
+    // Initialize host manager
     let host_mgr = Arc::new(host_session::HostSessionManager::new(Arc::new(config.clone())));
-    let signaling_handle = tokio::spawn(signaling::start_server(config.signaling_addr, host_mgr));
+    
+    // Handle signaling based on mode
+    let signaling_handle = if let Some(remote_url) = &args.remote_signaling_url {
+        // Remote signaling mode
+        let session_id = std::env::var("SESSION_ID").unwrap_or_else(|_| "default-session".to_string());
+        let remote_client = remote_signaling::RemoteSignalingClient::new(
+            remote_url.clone(),
+            session_id,
+            host_mgr.clone(),
+        );
+        tokio::spawn(async move {
+            if let Err(e) = remote_client.connect().await {
+                error!("Remote signaling connection failed: {}", e);
+            }
+            Ok::<(), anyhow::Error>(())
+        })
+    } else {
+        // Local signaling server mode
+        tokio::spawn(signaling::start_server(config.signaling_addr, host_mgr))
+    };
 
     #[cfg(target_os = "linux")]
     {
