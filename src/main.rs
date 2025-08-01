@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
 use std::net::SocketAddr;
-use tracing::{info, error, warn};
+use tracing::{info, error};
 use std::sync::Arc;
 
 mod config;

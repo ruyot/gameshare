@@ -20,7 +20,7 @@ webrtc = "0.10"
 
 # HTTP/WebSocket for signaling
 warp = "0.3"
-tokio-tungstenite = "0.20"
+tokio-tungstenite = { version = "0.20", features = ["rustls-tls-webpki-roots"] }
 url = "2.4"
 futures-util = "0.3"
 serde = { version = "1.0", features = ["derive"] }
