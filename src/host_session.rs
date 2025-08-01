@@ -44,7 +44,7 @@ impl HostSessionManager {
                 streamer.set_remote_description(&sdp, "offer").await?;
                 
                 // Create and send answer
-                let answer_sdp = streamer.create_answer().await?;
+                let answer_sdp = streamer.create_answer(&sdp).await?;
                 // Note: In remote mode, we would need to send this back through the remote signaling client
                 // For now, we'll just log it
                 info!("Created answer SDP for session: {}", session_id);
@@ -57,7 +57,7 @@ impl HostSessionManager {
             crate::signaling::SignalingMessage::IceCandidate { candidate, sdp_mid, sdp_mline_index, session_id } => {
                 info!("Received ICE candidate for session: {}", session_id);
                 let streamer = self.get_or_create(&session_id).await?;
-                streamer.add_ice_candidate(&candidate, sdp_mid, sdp_mline_index).await?;
+                streamer.add_ice_candidate(&candidate, sdp_mid.as_deref(), sdp_mline_index).await?;
             }
             crate::signaling::SignalingMessage::Join { session_id, client_type } => {
                 info!("Client joined session: {} as {:?}", session_id, client_type);

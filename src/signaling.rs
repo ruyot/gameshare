@@ -7,7 +7,7 @@ use tokio::sync::{mpsc, RwLock};
 use tracing::{debug, error, info, warn};
 use warp::ws::{Message, WebSocket};
 use warp::Filter;
-use futures_util::{SinkExt, StreamExt};
+use futures_util::SinkExt;
 
 use crate::error::GameShareError;
 use crate::host_session::HostSessionManager;
@@ -219,7 +219,7 @@ async fn handle_signaling_message(
 
                         // forward host ICE before we create offer so we don't miss early candidates
                         {
-                            let mut sig = tx.clone();
+                            let sig = tx.clone();
                             let sid_for_ice = session_id.clone();
                             pc.on_ice_candidate(Box::new(move |cand| {
                                 let tx_clone = sig.clone();

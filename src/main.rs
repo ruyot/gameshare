@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
 use std::net::SocketAddr;
-use tracing::{info, error};
+use tracing::{info, error, warn};
 use std::sync::Arc;
 
 mod config;
@@ -92,7 +92,7 @@ async fn main() -> Result<()> {
     let host_mgr = Arc::new(host_session::HostSessionManager::new(Arc::new(config.clone())));
     
     // Handle signaling based on mode
-    let signaling_handle = if let Some(remote_url) = &args.remote_signaling_url {
+    let _signaling_handle = if let Some(remote_url) = &args.remote_signaling_url {
         // Remote signaling mode
         let session_id = std::env::var("SESSION_ID").unwrap_or_else(|_| "default-session".to_string());
         let remote_client = remote_signaling::RemoteSignalingClient::new(
@@ -168,10 +168,10 @@ async fn main() -> Result<()> {
             // Small sleep to prevent busy loop
             tokio::time::sleep(std::time::Duration::from_millis(1)).await;
         }
-        
-        // Cleanup (moved inside the loop scope)
-        signaling_handle.abort();
     }
+
+    // Cleanup
+    _signaling_handle.abort();
 
     #[cfg(not(target_os = "linux"))]
     {
@@ -181,7 +181,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn validate_system_requirements(config: &Config) -> Result<()> {
+async fn validate_system_requirements(_config: &Config) -> Result<()> {
     info!("Validating system requirements...");
 
     // Check if running on Linux
