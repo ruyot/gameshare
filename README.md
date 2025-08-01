@@ -1,4 +1,4 @@
-# 🎮 GameShare Cloud Backend
+# GameShare Cloud Backend
 
 A decentralized P2P cloud gaming platform that allows users to host their hardware for others to play games remotely. This is the Stage 1 Linux proof-of-concept implementation in Rust.
 
