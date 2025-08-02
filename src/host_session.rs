@@ -71,14 +71,35 @@ impl HostSessionManager {
             }
             crate::signaling::SignalingMessage::Answer { sdp, session_id } => {
                 info!("Received answer for session: {}", session_id);
+                info!("Answer SDP length: {}", sdp.len());
                 let streamer = self.get_or_create(&session_id).await?;
+                
+                // Check current signaling state before setting remote description
+                let pc = streamer.peer_connection();
+                let signaling_state = pc.signaling_state();
+                info!("Current signaling state before setting answer: {:?}", signaling_state);
+                
                 streamer.set_remote_description(&sdp, "answer").await?;
+                info!("Successfully set remote description (answer) for session: {}", session_id);
                 Ok(None)
             }
             crate::signaling::SignalingMessage::IceCandidate { candidate, sdp_mid, sdp_mline_index, session_id } => {
                 info!("Received ICE candidate for session: {}", session_id);
                 let streamer = self.get_or_create(&session_id).await?;
+                
+                // Check if remote description is set
+                let pc = streamer.peer_connection();
+                let remote_desc = pc.remote_description().await;
+                
+                if remote_desc.is_none() {
+                    error!("Cannot add ICE candidate - remote description not set yet");
+                    // In a real implementation, we would queue these candidates
+                    // For now, just log the error
+                    return Ok(None);
+                }
+                
                 streamer.add_ice_candidate(&candidate, sdp_mid.as_deref(), sdp_mline_index).await?;
+                info!("Successfully added ICE candidate");
                 Ok(None)
             }
             crate::signaling::SignalingMessage::Join { session_id, client_type } => {

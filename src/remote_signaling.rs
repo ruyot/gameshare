@@ -127,6 +127,13 @@ impl RemoteSignalingClient {
                     match msg {
                         Some(Ok(Message::Text(text))) => {
                             info!("Received message: {}", text);
+                            
+                            // First, check if this is a "joined" acknowledgment that we should ignore
+                            if text.contains(r#""type":"joined"#) {
+                                debug!("Ignoring 'joined' acknowledgment message");
+                                continue;
+                            }
+                            
                             if let Ok(remote_msg) = serde_json::from_str::<RemoteSignalingMessage>(&text) {
                                 debug!("Successfully parsed message: {:?}", remote_msg);
                                 match Self::convert_remote_to_local(remote_msg) {
