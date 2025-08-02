@@ -1,6 +1,5 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::net::SocketAddr;
 use crate::Args;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

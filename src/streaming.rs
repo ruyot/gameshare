@@ -5,7 +5,7 @@ use tracing::{debug, error, info, warn};
 use webrtc::api::interceptor_registry::register_default_interceptors;
 use webrtc::api::media_engine::{MediaEngine, MIME_TYPE_H264, MIME_TYPE_OPUS};
 use webrtc::api::APIBuilder;
-use webrtc::api::setting_engine::SettingEngine;
+
 // use webrtc::ice_transport::NetworkType;  // Commented out due to import issues
 use webrtc::data_channel::data_channel_message::DataChannelMessage;
 use webrtc::data_channel::RTCDataChannel;
@@ -14,7 +14,7 @@ use webrtc::peer_connection::configuration::RTCConfiguration;
 use webrtc::peer_connection::peer_connection_state::RTCPeerConnectionState;
 use webrtc::peer_connection::RTCPeerConnection;
 use webrtc::rtp_transceiver::rtp_codec::{RTCRtpCodecCapability, RTCRtpCodecParameters, RTPCodecType};
-use webrtc::track::track_local::TrackLocal;
+
 use webrtc::track::track_local::track_local_static_rtp::TrackLocalStaticRTP;
 use webrtc::track::track_local::track_local_static_sample::TrackLocalStaticSample;
 use webrtc::media::Sample;
@@ -79,7 +79,7 @@ impl WebRTCStreamer {
 
         // Create API – allow both UDP and TCP candidates so we can fall back when UDP is blocked.
         let interceptor_registry = webrtc::interceptor::registry::Registry::new();
-        let mut interceptor_registry = register_default_interceptors(interceptor_registry, &mut media_engine)?;
+        let interceptor_registry = register_default_interceptors(interceptor_registry, &mut media_engine)?;
 
         let api = APIBuilder::new()
             .with_media_engine(media_engine)
@@ -156,7 +156,6 @@ impl WebRTCStreamer {
         let (frame_sender, mut frame_receiver) = mpsc::channel::<EncodedFrame>(100);
 
         // Setup data channel event handlers
-        let input_handler_clone = input_handler.clone();
         data_channel.on_open(Box::new(move || {
             info!("Data channel opened for input");
             Box::pin(async {})
@@ -175,7 +174,7 @@ impl WebRTCStreamer {
         // Setup connection state change handler
         let pc_clone = peer_connection.clone();
         peer_connection.on_peer_connection_state_change(Box::new(move |state: RTCPeerConnectionState| {
-            let pc = pc_clone.clone();
+            let _pc = pc_clone.clone();
             Box::pin(async move {
                 info!("Peer connection state changed: {:?}", state);
                 
@@ -197,7 +196,7 @@ impl WebRTCStreamer {
         // Spawn frame sending task
         let video_track_clone = video_track.clone();
         tokio::spawn(async move {
-            let mut pts = 0u64;
+            let mut _pts = 0u64;
             while let Some(frame) = frame_receiver.recv().await {
                 let sample = Sample {
                     data: Bytes::from(frame.data),
@@ -208,7 +207,7 @@ impl WebRTCStreamer {
                 if let Err(e) = video_track_clone.write_sample(&sample).await {
                     error!("Error sending video frame: {}", e);
                 }
-                pts += 1;
+                _pts += 1;
             }
         });
 

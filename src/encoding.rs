@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::process::{Command, Stdio};
 use std::sync::Arc;
 use tokio::process;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info};
 
 use crate::capture::Frame;
 use crate::config::Config;

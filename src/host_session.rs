@@ -94,12 +94,13 @@ impl HostSessionManager {
             crate::signaling::SignalingMessage::Leave { session_id } => {
                 info!("Client left session: {}", session_id);
                 // Could clean up the session here if needed
+                Ok(None)
             }
             crate::signaling::SignalingMessage::Error { message } => {
                 error!("Signaling error: {}", message);
+                Ok(None)
             }
         }
-        Ok(())
     }
 }
 

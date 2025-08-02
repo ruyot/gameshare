@@ -180,9 +180,6 @@ async fn main() -> Result<()> {
         }
     }
 
-    // Cleanup
-    _signaling_handle.abort();
-
     #[cfg(not(target_os = "linux"))]
     {
         anyhow::bail!("GameShare host agent is only supported on Linux");

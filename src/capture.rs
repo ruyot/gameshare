@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::process::{Command, Stdio};
 use std::sync::Arc;
 use tokio::sync::mpsc;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info};
 
 use crate::config::Config;
 use crate::error::GameShareError;
@@ -136,7 +136,7 @@ impl CaptureSystem {
         let mut ffmpeg_cmd = Command::new("ffmpeg");
         
         // Input configuration
-        if let Some(window_id) = self.window_id {
+        if let Some(_window_id) = self.window_id {
             // Capture specific window
             ffmpeg_cmd.args(&[
                 "-f", "x11grab",
