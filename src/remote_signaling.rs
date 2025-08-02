@@ -43,8 +43,6 @@ pub struct RemoteSignalingClient {
     url: String,
     session_id: String,
     host_mgr: Arc<HostSessionManager>,
-    // receiver for messages coming *from* the host
-    rx: tokio::sync::mpsc::UnboundedReceiver<SignalingMessage>,
 }
 
 impl RemoteSignalingClient {
@@ -52,46 +50,83 @@ impl RemoteSignalingClient {
         url: String,
         session_id: String,
         host_mgr: Arc<HostSessionManager>,
-        rx: tokio::sync::mpsc::UnboundedReceiver<SignalingMessage>,
     ) -> Self {
-        Self { url, session_id, host_mgr, rx }
+        Self { url, session_id, host_mgr }
     }
 
-    pub async fn connect(mut self) -> anyhow::Result<()> {
+    pub async fn connect(self) -> anyhow::Result<()> {
         use futures_util::{StreamExt, SinkExt};
-        let (ws, _) = tokio_tungstenite::connect_async(url::Url::parse(&self.url)?).await?;
-        let (mut ws_sink, mut ws_stream) = ws.split();
+        use tokio_tungstenite::tungstenite::Message;
+        use tracing::{info, error};
 
-        // 1) JOIN as host
-        let join = serde_json::to_string(&RemoteSignalingMessage::Join {
+        info!("Connecting to remote signaling server: {}", self.url);
+        
+        let (ws, _) = tokio_tungstenite::connect_async(url::Url::parse(&self.url)?).await?;
+        info!("Connected to remote signaling server");
+
+        let (mut write, mut read) = ws.split();
+
+        // Send join message
+        let join_msg = RemoteSignalingMessage::Join {
             session_id: self.session_id.clone(),
             client_type: ClientType::Host,
-        })?;
-        ws_sink.send(tokio_tungstenite::tungstenite::Message::Text(join)).await?;
+        };
+        let join_json = serde_json::to_string(&join_msg)?;
+        write.send(Message::Text(join_json)).await?;
+        info!("Joined session: {}", self.session_id);
 
-        // 2) writer task: forward every SignalingMessage the host sends
-        let mut writer = ws_sink;
-        let mut rx = self.rx;
-        tokio::spawn(async move {
-            while let Some(msg) = rx.recv().await {
-                if let Ok(remote) = RemoteSignalingClient::convert_local_to_remote(msg) {
-                    if let Ok(text) = serde_json::to_string(&remote) {
-                        if writer.send(tokio_tungstenite::tungstenite::Message::Text(text)).await.is_err() {
+        // Main loop: handle both incoming and outgoing messages
+        loop {
+            tokio::select! {
+                // Handle incoming messages from WebSocket
+                msg = read.next() => {
+                    match msg {
+                        Some(Ok(Message::Text(text))) => {
+                            info!("Received message: {}", text);
+                            if let Ok(remote_msg) = serde_json::from_str::<RemoteSignalingMessage>(&text) {
+                                if let Ok(local_msg) = Self::convert_remote_to_local(remote_msg) {
+                                    // Forward to host manager and get response
+                                    match self.host_mgr.handle_signaling_message(local_msg).await {
+                                        Ok(Some(response_msg)) => {
+                                            // Convert response back to remote format and send
+                                            if let Ok(remote_response) = Self::convert_local_to_remote(response_msg) {
+                                                if let Ok(response_json) = serde_json::to_string(&remote_response) {
+                                                    info!("Sending response: {}", response_json);
+                                                    if let Err(e) = write.send(Message::Text(response_json)).await {
+                                                        error!("Failed to send response: {}", e);
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        Ok(None) => {
+                                            // No response needed
+                                        }
+                                        Err(e) => {
+                                            error!("Failed to handle signaling message: {}", e);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Some(Ok(Message::Close(_))) => {
+                            info!("WebSocket connection closed");
                             break;
                         }
+                        Some(Err(e)) => {
+                            error!("WebSocket error: {}", e);
+                            break;
+                        }
+                        None => {
+                            info!("WebSocket stream ended");
+                            break;
+                        }
+                        _ => {}
                     }
                 }
             }
-        });
-
-        // 3) reader loop: forward incoming messages to host_mgr
-        while let Some(Ok(tokio_tungstenite::tungstenite::Message::Text(text))) = ws_stream.next().await {
-            if let Ok(remote) = serde_json::from_str::<RemoteSignalingMessage>(&text) {
-                if let Ok(local) = Self::convert_remote_to_local(remote) {
-                    self.host_mgr.handle_signaling_message(local).await?;
-                }
-            }
         }
+
         Ok(())
     }
 

@@ -14,7 +14,6 @@ use {
 pub struct HostSessionManager {
     cfg: Arc<Config>,
     sessions: Mutex<HashMap<String, Arc<WebRTCStreamer>>>,
-    response_tx: Option<tokio::sync::mpsc::UnboundedSender<crate::signaling::SignalingMessage>>,
 }
 
 #[cfg(target_os = "linux")]
@@ -23,13 +22,7 @@ impl HostSessionManager {
         Self { 
             cfg, 
             sessions: Mutex::new(HashMap::new()),
-            response_tx: None,
         }
-    }
-
-    pub fn with_response_sender(mut self, response_tx: tokio::sync::mpsc::UnboundedSender<crate::signaling::SignalingMessage>) -> Self {
-        self.response_tx = Some(response_tx);
-        self
     }
 
     /// Return the existing streamer for `session_id`, or lazily create one.
@@ -46,7 +39,8 @@ impl HostSessionManager {
     }
 
     /// Handle signaling messages from remote clients
-    pub async fn handle_signaling_message(self: &Arc<Self>, msg: crate::signaling::SignalingMessage) -> Result<()> {
+    /// Returns a response message if one should be sent back
+    pub async fn handle_signaling_message(self: &Arc<Self>, msg: crate::signaling::SignalingMessage) -> Result<Option<crate::signaling::SignalingMessage>> {
         match msg {
             crate::signaling::SignalingMessage::Offer { sdp, session_id } => {
                 info!("Received offer for session: {}", session_id);
@@ -55,19 +49,25 @@ impl HostSessionManager {
                 
                 // Create and send answer
                 let answer_sdp = streamer.create_answer(&sdp).await?;
-                // Note: In remote mode, we would need to send this back through the remote signaling client
-                // For now, we'll just log it
                 info!("Created answer SDP for session: {}", session_id);
+                
+                // Return answer to be sent back
+                Ok(Some(crate::signaling::SignalingMessage::Answer {
+                    sdp: answer_sdp,
+                    session_id: session_id.clone(),
+                }))
             }
             crate::signaling::SignalingMessage::Answer { sdp, session_id } => {
                 info!("Received answer for session: {}", session_id);
                 let streamer = self.get_or_create(&session_id).await?;
                 streamer.set_remote_description(&sdp, "answer").await?;
+                Ok(None)
             }
             crate::signaling::SignalingMessage::IceCandidate { candidate, sdp_mid, sdp_mline_index, session_id } => {
                 info!("Received ICE candidate for session: {}", session_id);
                 let streamer = self.get_or_create(&session_id).await?;
                 streamer.add_ice_candidate(&candidate, sdp_mid.as_deref(), sdp_mline_index).await?;
+                Ok(None)
             }
             crate::signaling::SignalingMessage::Join { session_id, client_type } => {
                 info!("Client joined session: {} as {:?}", session_id, client_type);
@@ -82,20 +82,13 @@ impl HostSessionManager {
                     let offer_sdp = streamer.create_offer().await?;
                     info!("Created offer SDP for session: {}", session_id);
                     
-                    // Send offer back through the remote signaling client
-                    if let Some(ref response_tx) = self.response_tx {
-                        let offer_msg = crate::signaling::SignalingMessage::Offer {
-                            sdp: offer_sdp,
-                            session_id: session_id.clone(),
-                        };
-                        if let Err(e) = response_tx.send(offer_msg) {
-                            error!("Failed to send offer: {}", e);
-                        } else {
-                            info!("Sent offer to remote signaling server");
-                        }
-                    } else {
-                        info!("No response sender available, offer SDP: {}", offer_sdp);
-                    }
+                    // Return offer to be sent back
+                    Ok(Some(crate::signaling::SignalingMessage::Offer {
+                        sdp: offer_sdp,
+                        session_id: session_id.clone(),
+                    }))
+                } else {
+                    Ok(None)
                 }
             }
             crate::signaling::SignalingMessage::Leave { session_id } => {
@@ -126,9 +119,9 @@ impl HostSessionManager {
         self
     }
     
-    /// Handle signaling messages from remote clients (stub for non-Linux)
-    pub async fn handle_signaling_message(self: &Arc<Self>, _msg: crate::signaling::SignalingMessage) -> anyhow::Result<()> {
-        // Stub implementation for non-Linux platforms
-        Ok(())
-    }
+                    /// Handle signaling messages from remote clients (stub for non-Linux)
+                pub async fn handle_signaling_message(self: &Arc<Self>, _msg: crate::signaling::SignalingMessage) -> anyhow::Result<Option<crate::signaling::SignalingMessage>> {
+                    // Stub implementation for non-Linux platforms
+                    Ok(None)
+                }
 } 

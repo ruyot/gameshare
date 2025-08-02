@@ -97,21 +97,14 @@ async fn main() -> Result<()> {
         // Remote signaling mode
         let session_id = std::env::var("SESSION_ID").unwrap_or_else(|_| "default-session".to_string());
 
-        // single channel shared between host and remote client
-        let (sig_tx, sig_rx) = tokio::sync::mpsc::unbounded_channel::<crate::signaling::SignalingMessage>();
+        // Create host manager
+        let host_mgr = Arc::new(host_session::HostSessionManager::new(Arc::new(config.clone())));
 
-        // HostSessionManager gets the *sender*
-        let host_mgr = Arc::new(
-            host_session::HostSessionManager::new(Arc::new(config.clone()))
-                .with_response_sender(sig_tx.clone())
-        );
-
-        // RemoteSignalingClient gets the *receiver*
+        // Create remote signaling client
         let remote_client = remote_signaling::RemoteSignalingClient::new(
             config.signaling_addr.clone(),
             session_id,
             host_mgr.clone(),
-            sig_rx,
         );
 
         tokio::spawn(async move {
