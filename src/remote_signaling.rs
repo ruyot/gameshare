@@ -48,11 +48,13 @@ pub struct RemoteSignalingClient {
     session_id: String,
     host_mgr: Arc<HostSessionManager>,
     tx: tokio::sync::mpsc::UnboundedSender<SignalingMessage>,
+    response_tx: tokio::sync::mpsc::UnboundedSender<SignalingMessage>,
 }
 
 impl RemoteSignalingClient {
     pub fn new(url: String, session_id: String, host_mgr: Arc<HostSessionManager>) -> Self {
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<SignalingMessage>();
+        let (response_tx, response_rx) = tokio::sync::mpsc::unbounded_channel::<SignalingMessage>();
         
         // Spawn a task to handle outgoing messages
         let url_clone = url.clone();
@@ -63,11 +65,21 @@ impl RemoteSignalingClient {
             }
         });
 
+        // Spawn a task to handle responses from host manager
+        let url_clone = url.clone();
+        let session_id_clone = session_id.clone();
+        tokio::spawn(async move {
+            if let Err(e) = Self::run_response_messages(url_clone, session_id_clone, response_rx).await {
+                error!("Response message handler failed: {}", e);
+            }
+        });
+
         Self {
             url,
             session_id,
             host_mgr,
             tx,
+            response_tx,
         }
     }
 
@@ -97,8 +109,8 @@ impl RemoteSignalingClient {
                         // Convert remote message to local format
                         let local_msg = self.convert_remote_to_local(remote_msg);
                         if let Ok(local_msg) = local_msg {
-                            // Forward to host manager
-                            if let Err(e) = self.host_mgr.handle_signaling_message(local_msg).await {
+                            // Forward to host manager and handle any responses
+                            if let Err(e) = self.handle_host_message(local_msg, &mut write).await {
                                 error!("Failed to handle signaling message: {}", e);
                             }
                         }
@@ -146,6 +158,33 @@ impl RemoteSignalingClient {
         Ok(())
     }
 
+    async fn run_response_messages(
+        url: String,
+        session_id: String,
+        mut rx: tokio::sync::mpsc::UnboundedReceiver<SignalingMessage>,
+    ) -> Result<()> {
+        let url = Url::parse(&url)?;
+        let (ws_stream, _) = connect_async(url).await?;
+        let (mut write, _) = ws_stream.split();
+
+        // Send join message
+        let join_msg = RemoteSignalingMessage::Join {
+            session_id: session_id.clone(),
+            client_type: ClientType::Host,
+        };
+        let join_json = serde_json::to_string(&join_msg)?;
+        write.send(Message::Text(join_json)).await?;
+
+        // Handle response messages from host manager
+        while let Some(local_msg) = rx.recv().await {
+            let remote_msg = Self::convert_local_to_remote(local_msg)?;
+            let remote_json = serde_json::to_string(&remote_msg)?;
+            write.send(Message::Text(remote_json)).await?;
+        }
+
+        Ok(())
+    }
+
     fn convert_remote_to_local(&self, remote_msg: RemoteSignalingMessage) -> Result<SignalingMessage> {
         match remote_msg {
             RemoteSignalingMessage::Offer { sdp, session_id } => {
@@ -172,6 +211,19 @@ impl RemoteSignalingClient {
                 Ok(SignalingMessage::Error { message })
             }
         }
+    }
+
+    async fn handle_host_message(
+        &self,
+        local_msg: SignalingMessage,
+        _write: &mut futures_util::stream::SplitSink<tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>, tokio_tungstenite::tungstenite::protocol::Message>,
+    ) -> Result<()> {
+        // Forward to host manager
+        self.host_mgr.handle_signaling_message(local_msg).await?;
+        
+        // Check if we need to send any responses back
+        // For now, we'll handle this in the host session manager
+        Ok(())
     }
 
     fn convert_local_to_remote(local_msg: SignalingMessage) -> Result<RemoteSignalingMessage> {

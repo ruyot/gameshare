@@ -95,6 +95,16 @@ async fn main() -> Result<()> {
     let _signaling_handle = if let Some(remote_url) = &args.remote_signaling_url {
         // Remote signaling mode
         let session_id = std::env::var("SESSION_ID").unwrap_or_else(|_| "default-session".to_string());
+        
+        // Create response channel for host manager
+        let (response_tx, response_rx) = tokio::sync::mpsc::unbounded_channel::<crate::signaling::SignalingMessage>();
+        
+        // Create host manager with response sender
+        let host_mgr = Arc::new(
+            host_session::HostSessionManager::new(Arc::new(config.clone()))
+                .with_response_sender(response_tx)
+        );
+        
         let remote_client = remote_signaling::RemoteSignalingClient::new(
             remote_url.clone(),
             session_id,
