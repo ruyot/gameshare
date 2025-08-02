@@ -1,4 +1,8 @@
 signaling_addr = "127.0.0.1:8111"
+target_framerate = 30
+target_bitrate = 5000
+resolution = { width = 1920, height = 1080 }
+use_nvenc = true
 
 [video]
 target_framerate = 30

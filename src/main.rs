@@ -82,13 +82,17 @@ async fn main() -> Result<()> {
     info!("Starting GameShare Host Agent v{}", env!("CARGO_PKG_VERSION"));
 
     // Load configuration
+    info!("About to load configuration...");
     let config = Config::load(&args.config.clone(), args.clone())?;
     info!("Configuration loaded: {:?}", config);
+    info!("Remote signaling URL from args: {:?}", args.remote_signaling_url);
 
     // Validate system requirements
+    info!("About to validate system requirements...");
     validate_system_requirements(&config).await?;
 
     // Handle signaling based on mode
+    info!("Remote signaling URL: {:?}", args.remote_signaling_url);
     let _signaling_handle = if let Some(remote_url) = &args.remote_signaling_url {
         // Remote signaling mode
         let session_id = std::env::var("SESSION_ID").unwrap_or_else(|_| "default-session".to_string());
