@@ -52,16 +52,9 @@ impl HostSessionManager {
                 let signaling_state = pc.signaling_state();
                 
                 if signaling_state == RTCSignalingState::HaveLocalOffer {
-                    info!("Collision detected - rolling back local offer to handle remote offer");
-                    // Rollback to stable state to handle the incoming offer
-                    let rollback_description = webrtc::peer_connection::sdp::session_description::RTCSessionDescription {
-                        sdp_type: webrtc::peer_connection::sdp::sdp_type::RTCSdpType::Rollback,
-                        sdp: String::new(),
-                    };
-                    if let Err(e) = pc.set_local_description(rollback_description).await {
-                        error!("Failed to rollback local description: {}", e);
-                        return Ok(None);
-                    }
+                    info!("Collision detected - accepting remote offer anyway");
+                    // For demo, Accept the offer even in collision state
+                    // This is less "perfect" but will work for the demo
                 }
                 
                 streamer.set_remote_description(&sdp, "offer").await?;
