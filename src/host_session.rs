@@ -8,6 +8,7 @@ use {
     std::{collections::HashMap, sync::Arc},
     tokio::sync::Mutex,
     tracing::{info, error},
+    webrtc::peer_connection::signaling_state::RTCSignalingState,
 };
 
 #[cfg(target_os = "linux")]
@@ -50,7 +51,7 @@ impl HostSessionManager {
                 let pc = streamer.peer_connection();
                 let signaling_state = pc.signaling_state();
                 
-                if signaling_state == webrtc::peer_connection::sdp::sdp_type::RTCSignalingState::HaveLocalOffer {
+                if signaling_state == RTCSignalingState::HaveLocalOffer {
                     info!("Ignoring incoming offer in have-local-offer state (impolite peer)");
                     return Ok(None); // Ignore the offer
                 }
