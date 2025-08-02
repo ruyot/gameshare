@@ -1,4 +1,4 @@
-signaling_addr = "127.0.0.1:8111"
+signaling_addr = "wss://gameshare-clientview.fly.dev/signaling"
 target_framerate = 30
 target_bitrate = 5000
 resolution = { width = 1920, height = 1080 }

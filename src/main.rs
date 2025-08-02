@@ -38,8 +38,8 @@ struct Args {
     process_name: Option<String>,
 
     /// Signaling server address (for local server mode)
-    #[arg(short, long, default_value = "127.0.0.1:8080")]
-    signaling_addr: SocketAddr,
+    #[arg(short, long, default_value = "wss://gameshare-clientview.fly.dev/signaling")]
+    signaling_addr: String,
 
     /// Remote signaling server URL (for remote mode)
     #[arg(long)]
@@ -92,8 +92,8 @@ async fn main() -> Result<()> {
     validate_system_requirements(&config).await?;
 
     // Handle signaling based on mode
-    info!("Remote signaling URL: {:?}", args.remote_signaling_url);
-    let _signaling_handle = if let Some(remote_url) = &args.remote_signaling_url {
+    info!("Signaling address: {}", config.signaling_addr);
+    let _signaling_handle = if config.signaling_addr.starts_with("ws://") || config.signaling_addr.starts_with("wss://") {
         // Remote signaling mode
         let session_id = std::env::var("SESSION_ID").unwrap_or_else(|_| "default-session".to_string());
 
@@ -108,7 +108,7 @@ async fn main() -> Result<()> {
 
         // RemoteSignalingClient gets the *receiver*
         let remote_client = remote_signaling::RemoteSignalingClient::new(
-            remote_url.clone(),
+            config.signaling_addr.clone(),
             session_id,
             host_mgr.clone(),
             sig_rx,
@@ -124,7 +124,8 @@ async fn main() -> Result<()> {
         // Local signaling server mode
         // Create host manager for local mode
         let host_mgr = Arc::new(host_session::HostSessionManager::new(Arc::new(config.clone())));
-        tokio::spawn(signaling::start_server(config.signaling_addr, host_mgr))
+        let addr: SocketAddr = config.signaling_addr.parse().expect("Invalid socket address");
+        tokio::spawn(signaling::start_server(addr, host_mgr))
     };
 
     #[cfg(target_os = "linux")]

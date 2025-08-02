@@ -5,7 +5,7 @@ use crate::Args;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
-    pub signaling_addr: SocketAddr,
+    pub signaling_addr: String,
     pub target_framerate: u32,
     pub target_bitrate: u32,
     pub resolution: Resolution,
@@ -65,7 +65,7 @@ pub struct IceServer {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            signaling_addr: "127.0.0.1:8080".parse().unwrap(),
+            signaling_addr: "wss://gameshare-clientview.fly.dev/signaling".to_string(),
             target_framerate: 30,
             target_bitrate: 5000,
             resolution: Resolution { width: 1920, height: 1080 },
@@ -121,7 +121,7 @@ impl Config {
         };
 
         // Override with command line arguments
-        config.signaling_addr = args.signaling_addr;
+        config.signaling_addr = args.signaling_addr.to_string();
         config.target_framerate = args.framerate;
         config.target_bitrate = args.bitrate;
         config.use_nvenc = args.nvenc;
