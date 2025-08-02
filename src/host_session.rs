@@ -47,13 +47,21 @@ impl HostSessionManager {
                 info!("Received offer for session: {}", session_id);
                 let streamer = self.get_or_create(&session_id).await?;
                 
-                // Perfect negotiation: Host is "impolite" - ignore offers if we're already in have-local-offer state
+                // Handle offers more gracefully - rollback and accept
                 let pc = streamer.peer_connection();
                 let signaling_state = pc.signaling_state();
                 
                 if signaling_state == RTCSignalingState::HaveLocalOffer {
-                    info!("Ignoring incoming offer in have-local-offer state (impolite peer)");
-                    return Ok(None); // Ignore the offer
+                    info!("Collision detected - rolling back local offer to handle remote offer");
+                    // Rollback to stable state to handle the incoming offer
+                    let rollback_description = webrtc::peer_connection::sdp::session_description::RTCSessionDescription {
+                        sdp_type: webrtc::peer_connection::sdp::sdp_type::RTCSdpType::Rollback,
+                        sdp: String::new(),
+                    };
+                    if let Err(e) = pc.set_local_description(rollback_description).await {
+                        error!("Failed to rollback local description: {}", e);
+                        return Ok(None);
+                    }
                 }
                 
                 streamer.set_remote_description(&sdp, "offer").await?;
