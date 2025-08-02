@@ -212,37 +212,16 @@ async fn handle_signaling_message(
                     session.client_senders.push(tx.clone());
                     info!("Client joined session: {} (total clients: {})", session_id, session.client_senders.len());
 
-                    #[cfg(target_os="linux")]
-                    {
-                        let streamer = host_mgr.get_or_create(&session_id).await?;
-                        let pc       = streamer.peer_connection();
-
-                        // forward host ICE before we create offer so we don't miss early candidates
-                        {
-                            let sig = tx.clone();
-                            let sid_for_ice = session_id.clone();
-                            pc.on_ice_candidate(Box::new(move |cand| {
-                                let tx_clone = sig.clone();
-                                let sid = sid_for_ice.clone();
-                                Box::pin(async move {
-                                    if let Some(c) = cand {
-                                        if let Ok(json) = c.to_json() {
-                                            let _ = tx_clone.send(SignalingMessage::IceCandidate {
-                                                candidate: json.candidate.clone(),
-                                                sdp_mid: json.sdp_mid.clone(),
-                                                sdp_mline_index: json.sdp_mline_index,
-                                                session_id: sid,
-                                            });
-                                            debug!("HOST ICE {}", json.candidate);
-                                        }
-                                    }
-                                })
-                            }));
-                        }
-
-                        // now create and send offer
-                        let offer_sdp = streamer.create_offer().await?;
-                        let _ = tx.send(SignalingMessage::Offer { sdp: offer_sdp, session_id: session_id.clone() });
+                    // Forward the join message to the host so it can create an offer
+                    if let Some(ref host_sender) = session.host_sender {
+                        let join_msg = SignalingMessage::Join {
+                            session_id: session_id.clone(),
+                            client_type: ClientType::Client,
+                        };
+                        let _ = host_sender.send(join_msg);
+                        info!("Forwarded client join to host for session: {}", session_id);
+                    } else {
+                        warn!("No host available for session: {}", session_id);
                     }
                 }
             }

@@ -38,10 +38,10 @@ urls = ["stun:stun.l.google.com:19302"]
 urls = ["stun:stun1.l.google.com:19302"]
 
 # Add TURN servers if needed for NAT traversal
-# [[webrtc.ice_servers]]
-# urls = ["turn:your-turn-server.com:3478"]
-# username = "your-username"
-# credential = "your-password"
+[[webrtc.ice_servers]]
+urls = ["turn:global.relay.metered.ca:80", "turn:global.relay.metered.ca:443?transport=tcp"]
+username = "f5e9b6f5df726ad6e7f4e8e9"
+credential = "Gk4EhT4xJCdXgY8p"
 
 [webrtc]
 data_channel_ordered = false
