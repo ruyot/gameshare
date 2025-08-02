@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use crate::host_session::HostSessionManager;
 use crate::signaling::{SignalingMessage, ClientType};
+use tracing::{info, error, debug};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -26,6 +27,11 @@ pub enum RemoteSignalingMessage {
     },
     #[serde(rename = "join")]
     Join {
+        session_id: String,
+        client_type: ClientType,
+    },
+    #[serde(rename = "joined")]
+    Joined {
         session_id: String,
         client_type: ClientType,
     },
@@ -123,7 +129,8 @@ impl RemoteSignalingClient {
                             info!("Received message: {}", text);
                             if let Ok(remote_msg) = serde_json::from_str::<RemoteSignalingMessage>(&text) {
                                 debug!("Successfully parsed message: {:?}", remote_msg);
-                                if let Ok(local_msg) = Self::convert_remote_to_local(remote_msg) {
+                                match Self::convert_remote_to_local(remote_msg) {
+                                    Ok(local_msg) => {
                                     debug!("Converted to local message: {:?}", local_msg);
                                     // Forward to host manager and get response
                                     match self.host_mgr.handle_signaling_message(local_msg).await {
@@ -145,6 +152,15 @@ impl RemoteSignalingClient {
                                         }
                                         Err(e) => {
                                             error!("Failed to handle signaling message: {}", e);
+                                        }
+                                    }
+                                    }
+                                    Err(e) => {
+                                        // Handle conversion errors (like "joined" acknowledgments)
+                                        if e.to_string().contains("Joined acknowledgment") {
+                                            debug!("Received join acknowledgment - no action needed");
+                                        } else {
+                                            error!("Failed to convert remote message: {}", e);
                                         }
                                     }
                                 }
@@ -192,6 +208,11 @@ impl RemoteSignalingClient {
             }
             RemoteSignalingMessage::Join { session_id, client_type } => {
                 Ok(SignalingMessage::Join { session_id, client_type })
+            }
+            RemoteSignalingMessage::Joined { session_id, client_type } => {
+                // "joined" is just an acknowledgment - log it but don't forward to host manager
+                info!("Join acknowledged: {} as {:?}", session_id, client_type);
+                return Err(anyhow::anyhow!("Joined acknowledgment - no forwarding needed"));
             }
             RemoteSignalingMessage::Leave { session_id } => {
                 Ok(SignalingMessage::Leave { session_id })
