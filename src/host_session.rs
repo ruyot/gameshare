@@ -47,14 +47,14 @@ impl HostSessionManager {
                 info!("Received offer for session: {}", session_id);
                 let streamer = self.get_or_create(&session_id).await?;
                 
-                // Handle offers more gracefully - rollback and accept
+                // Check signaling state to handle collisions
                 let pc = streamer.peer_connection();
                 let signaling_state = pc.signaling_state();
                 
                 if signaling_state == RTCSignalingState::HaveLocalOffer {
-                    info!("Collision detected - accepting remote offer anyway");
-                    // For demo, Accept the offer even in collision state
-                    // This is less "perfect" but will work for the demo
+                    info!("Collision detected - ignoring remote offer since we already have a local offer");
+                    // Ignore the offer to prevent collision - we're the host and should be sending offers, not receiving them
+                    return Ok(None);
                 }
                 
                 streamer.set_remote_description(&sdp, "offer").await?;
