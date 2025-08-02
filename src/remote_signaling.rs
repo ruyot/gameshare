@@ -12,11 +12,13 @@ pub enum RemoteSignalingMessage {
     Offer {
         sdp: String,
         session_id: String,
+        client_type: ClientType,
     },
     #[serde(rename = "answer")]
     Answer {
         sdp: String,
         session_id: String,
+        client_type: ClientType,
     },
     #[serde(rename = "ice-candidate")]
     IceCandidate {
@@ -24,6 +26,7 @@ pub enum RemoteSignalingMessage {
         sdp_mid: Option<String>,
         sdp_mline_index: Option<u16>,
         session_id: String,
+        client_type: ClientType,
     },
     #[serde(rename = "join")]
     Join {
@@ -106,6 +109,7 @@ impl RemoteSignalingClient {
                                 sdp_mid: json.sdp_mid.clone(),
                                 sdp_mline_index: json.sdp_mline_index,
                                 session_id: sid.clone(),
+                                client_type: ClientType::Host,
                             };
                             if let Ok(text) = serde_json::to_string(&msg) {
                                 let mut w = write_inner.lock().await;
@@ -127,6 +131,13 @@ impl RemoteSignalingClient {
                     match msg {
                         Some(Ok(Message::Text(text))) => {
                             info!("Received message: {}", text);
+                            
+                            // Parse the message type for better logging
+                            if let Ok(msg_type) = serde_json::from_str::<serde_json::Value>(&text) {
+                                if let Some(msg_type_str) = msg_type.get("type").and_then(|t| t.as_str()) {
+                                    info!("Message type: {}", msg_type_str);
+                                }
+                            }
                             
                             // First, check if this is a "joined" acknowledgment that we should ignore
                             if text.contains(r#""type":"joined"#) {
@@ -199,13 +210,13 @@ impl RemoteSignalingClient {
 
     fn convert_remote_to_local(remote_msg: RemoteSignalingMessage) -> Result<SignalingMessage> {
         match remote_msg {
-            RemoteSignalingMessage::Offer { sdp, session_id } => {
+            RemoteSignalingMessage::Offer { sdp, session_id, client_type: _ } => {
                 Ok(SignalingMessage::Offer { sdp, session_id })
             }
-            RemoteSignalingMessage::Answer { sdp, session_id } => {
+            RemoteSignalingMessage::Answer { sdp, session_id, client_type: _ } => {
                 Ok(SignalingMessage::Answer { sdp, session_id })
             }
-            RemoteSignalingMessage::IceCandidate { candidate, sdp_mid, sdp_mline_index, session_id } => {
+            RemoteSignalingMessage::IceCandidate { candidate, sdp_mid, sdp_mline_index, session_id, client_type: _ } => {
                 Ok(SignalingMessage::IceCandidate { 
                     candidate, 
                     sdp_mid, 
@@ -233,17 +244,26 @@ impl RemoteSignalingClient {
     fn convert_local_to_remote(local_msg: SignalingMessage) -> Result<RemoteSignalingMessage> {
         match local_msg {
             SignalingMessage::Offer { sdp, session_id } => {
-                Ok(RemoteSignalingMessage::Offer { sdp, session_id })
+                Ok(RemoteSignalingMessage::Offer { 
+                    sdp, 
+                    session_id,
+                    client_type: ClientType::Host // Host always sends offers
+                })
             }
             SignalingMessage::Answer { sdp, session_id } => {
-                Ok(RemoteSignalingMessage::Answer { sdp, session_id })
+                Ok(RemoteSignalingMessage::Answer { 
+                    sdp, 
+                    session_id,
+                    client_type: ClientType::Host // This shouldn't happen, but just in case
+                })
             }
             SignalingMessage::IceCandidate { candidate, sdp_mid, sdp_mline_index, session_id } => {
                 Ok(RemoteSignalingMessage::IceCandidate { 
                     candidate, 
                     sdp_mid, 
                     sdp_mline_index, 
-                    session_id 
+                    session_id,
+                    client_type: ClientType::Host // Host sending its ICE candidates
                 })
             }
             SignalingMessage::Join { session_id, client_type } => {
