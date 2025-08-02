@@ -57,14 +57,16 @@ impl RemoteSignalingClient {
     pub async fn connect(self) -> anyhow::Result<()> {
         use futures_util::{StreamExt, SinkExt};
         use tokio_tungstenite::tungstenite::Message;
-        use tracing::{info, error};
+        use tracing::{info, error, debug};
 
         info!("Connecting to remote signaling server: {}", self.url);
         
         let (ws, _) = tokio_tungstenite::connect_async(url::Url::parse(&self.url)?).await?;
         info!("Connected to remote signaling server");
 
-        let (mut write, mut read) = ws.split();
+        let (write_raw, mut read) = ws.split();
+        // Wrap the write half in an Arc<Mutex<..>> so we can share it across tasks & callbacks
+        let write = std::sync::Arc::new(tokio::sync::Mutex::new(write_raw));
 
         // Send join message
         let join_msg = RemoteSignalingMessage::Join {
@@ -72,8 +74,43 @@ impl RemoteSignalingClient {
             client_type: ClientType::Host,
         };
         let join_json = serde_json::to_string(&join_msg)?;
-        write.send(Message::Text(join_json)).await?;
+        {
+            let mut w = write.lock().await;
+            w.send(Message::Text(join_json)).await?;
+        }
         info!("Joined session: {}", self.session_id);
+
+        // Forward local ICE candidates to the remote signaling server immediately (trickle ICE)
+        {
+            use webrtc::peer_connection::RTCPeerConnection;
+            let write_clone = write.clone();
+            let session_id_clone = self.session_id.clone();
+            let streamer = self.host_mgr.get_or_create(&self.session_id).await?;
+            let pc: std::sync::Arc<RTCPeerConnection> = streamer.peer_connection();
+            pc.on_ice_candidate(Box::new(move |cand| {
+                let write_inner = write_clone.clone();
+                let sid = session_id_clone.clone();
+                Box::pin(async move {
+                    if let Some(c) = cand {
+                        if let Ok(json) = c.to_json() {
+                            tracing::debug!("Sending local ICE candidate: {}", json.candidate);
+                            let msg = RemoteSignalingMessage::IceCandidate {
+                                candidate: json.candidate.clone(),
+                                sdp_mid: json.sdp_mid.clone(),
+                                sdp_mline_index: json.sdp_mline_index,
+                                session_id: sid.clone(),
+                            };
+                            if let Ok(text) = serde_json::to_string(&msg) {
+                                let mut w = write_inner.lock().await;
+                                if let Err(e) = w.send(Message::Text(text)).await {
+                                    tracing::error!("Failed to send ICE candidate: {}", e);
+                                }
+                            }
+                        }
+                    }
+                })
+            }));
+        }
 
         // Main loop: handle both incoming and outgoing messages
         loop {
@@ -92,7 +129,8 @@ impl RemoteSignalingClient {
                                             if let Ok(remote_response) = Self::convert_local_to_remote(response_msg) {
                                                 if let Ok(response_json) = serde_json::to_string(&remote_response) {
                                                     info!("Sending response: {}", response_json);
-                                                    if let Err(e) = write.send(Message::Text(response_json)).await {
+                                                    let mut w = write.lock().await;
+                                                        if let Err(e) = w.send(Message::Text(response_json)).await {
                                                         error!("Failed to send response: {}", e);
                                                         break;
                                                     }

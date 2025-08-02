@@ -106,6 +106,22 @@ impl WebRTCStreamer {
         // Create peer connection
         let peer_connection = Arc::new(api.new_peer_connection(rtc_config).await?);
 
+        // Attach on_ice_candidate handler for trickle ICE
+        {
+            let pc_clone = peer_connection.clone();
+            pc_clone.on_ice_candidate(Box::new(|cand| {
+                Box::pin(async move {
+                    if let Some(c) = cand {
+                        if let Ok(json) = c.to_json() {
+                            debug!("Local ICE candidate gathered: {}", json.candidate);
+                        }
+                    } else {
+                        debug!("ICE gathering complete");
+                    }
+                })
+            }));
+        }
+
         // Create video track
         let video_track = Arc::new(TrackLocalStaticSample::new(
             RTCRtpCodecCapability {
