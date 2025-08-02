@@ -88,28 +88,28 @@ async fn main() -> Result<()> {
     // Validate system requirements
     validate_system_requirements(&config).await?;
 
-    // Initialize host manager
-    let host_mgr = Arc::new(host_session::HostSessionManager::new(Arc::new(config.clone())));
-    
     // Handle signaling based on mode
     let _signaling_handle = if let Some(remote_url) = &args.remote_signaling_url {
         // Remote signaling mode
         let session_id = std::env::var("SESSION_ID").unwrap_or_else(|_| "default-session".to_string());
-        
-        // Create response channel for host manager
-        let (response_tx, response_rx) = tokio::sync::mpsc::unbounded_channel::<crate::signaling::SignalingMessage>();
-        
-        // Create host manager with response sender
+
+        // single channel shared between host and remote client
+        let (sig_tx, sig_rx) = tokio::sync::mpsc::unbounded_channel::<crate::signaling::SignalingMessage>();
+
+        // HostSessionManager gets the *sender*
         let host_mgr = Arc::new(
             host_session::HostSessionManager::new(Arc::new(config.clone()))
-                .with_response_sender(response_tx)
+                .with_response_sender(sig_tx.clone())
         );
-        
+
+        // RemoteSignalingClient gets the *receiver*
         let remote_client = remote_signaling::RemoteSignalingClient::new(
             remote_url.clone(),
             session_id,
             host_mgr.clone(),
+            sig_rx,
         );
+
         tokio::spawn(async move {
             if let Err(e) = remote_client.connect().await {
                 error!("Remote signaling connection failed: {}", e);
@@ -118,6 +118,8 @@ async fn main() -> Result<()> {
         })
     } else {
         // Local signaling server mode
+        // Create host manager for local mode
+        let host_mgr = Arc::new(host_session::HostSessionManager::new(Arc::new(config.clone())));
         tokio::spawn(signaling::start_server(config.signaling_addr, host_mgr))
     };
 

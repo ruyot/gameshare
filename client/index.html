@@ -262,11 +262,11 @@
         <div class="controls">
             <div class="control-group">
                 <label for="signalingUrl">Signaling Server:</label>
-                <input type="url" id="signalingUrl" value="ws://localhost:8111/signaling" placeholder="ws://localhost:8111/signaling">
+                <input type="url" id="signalingUrl" value="wss://gameshare-clientview.fly.dev/signaling" placeholder="wss://gameshare-clientview.fly.dev/signaling">
             </div>
             <div class="control-group">
                 <label for="sessionId">Session ID:</label>
-                <input type="text" id="sessionId" value="test-session" placeholder="Enter session ID">
+                <input type="text" id="sessionId" value="default-session" placeholder="Enter session ID">
                 <button id="connectBtn" onclick="connect()">Connect</button>
                 <button id="disconnectBtn" onclick="disconnect()" disabled class="disconnect-btn">Disconnect</button>
             </div>
