@@ -5,6 +5,10 @@ use crate::host_session::HostSessionManager;
 use crate::signaling::{SignalingMessage, ClientType};
 use tracing::{info, error, debug};
 
+fn default_client_type() -> ClientType {
+    ClientType::Client // Assume messages without client_type are from clients
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum RemoteSignalingMessage {
@@ -18,6 +22,7 @@ pub enum RemoteSignalingMessage {
     Answer {
         sdp: String,
         session_id: String,
+        #[serde(default = "default_client_type")]
         client_type: ClientType,
     },
     #[serde(rename = "ice-candidate")]
@@ -26,6 +31,7 @@ pub enum RemoteSignalingMessage {
         sdp_mid: Option<String>,
         sdp_mline_index: Option<u16>,
         session_id: String,
+        #[serde(default = "default_client_type")]
         client_type: ClientType,
     },
     #[serde(rename = "join")]
