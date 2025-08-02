@@ -155,11 +155,16 @@ class GameShareClient {
     }
 
     async setupPeerConnection() {
-        // Create peer connection with STUN servers
+        // Create peer connection with STUN and TURN servers
         this.pc = new RTCPeerConnection({
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' }
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { 
+                    urls: ['turn:global.relay.metered.ca:80', 'turn:global.relay.metered.ca:443?transport=tcp'],
+                    username: 'f5e9b6f5df726ad6e7f4e8e9',
+                    credential: 'Gk4EhT4xJCdXgY8p'
+                }
             ]
         });
 
@@ -210,6 +215,11 @@ class GameShareClient {
                     break;
             }
         };
+
+        // Handle ICE connection state changes
+        this.pc.oniceconnectionstatechange = () => {
+            console.log('ICE connection state:', this.pc.iceConnectionState);
+        };
     }
 
     setupDataChannel() {
@@ -229,31 +239,43 @@ class GameShareClient {
     async handleOffer(message) {
         console.log('Handling offer');
         
-        await this.pc.setRemoteDescription({
-            type: 'offer',
-            sdp: message.sdp
-        });
+        try {
+            await this.pc.setRemoteDescription({
+                type: 'offer',
+                sdp: message.sdp
+            });
+            console.log('Set remote description (offer) successfully');
 
-        const answer = await this.pc.createAnswer();
-        await this.pc.setLocalDescription(answer);
+            const answer = await this.pc.createAnswer();
+            await this.pc.setLocalDescription(answer);
+            console.log('Created and set local description (answer) successfully');
 
-        const answerMessage = {
-            type: 'answer',
-            sdp: answer.sdp,
-            session_id: this.sessionId
-        };
+            const answerMessage = {
+                type: 'answer',
+                sdp: answer.sdp,
+                session_id: this.sessionId
+            };
 
-        this.ws.send(JSON.stringify(answerMessage));
+            this.ws.send(JSON.stringify(answerMessage));
+            console.log('Sent answer to host');
+        } catch (error) {
+            console.error('Error handling offer:', error);
+        }
     }
 
     async handleIceCandidate(message) {
-        console.log('Handling ICE candidate');
+        console.log('Handling ICE candidate:', message.candidate);
         
-        await this.pc.addIceCandidate({
-            candidate: message.candidate,
-            sdpMid: message.sdp_mid,
-            sdpMLineIndex: message.sdp_mline_index
-        });
+        try {
+            await this.pc.addIceCandidate({
+                candidate: message.candidate,
+                sdpMid: message.sdp_mid,
+                sdpMLineIndex: message.sdp_mline_index
+            });
+            console.log('Added ICE candidate successfully');
+        } catch (error) {
+            console.error('Error adding ICE candidate:', error);
+        }
     }
 
     sendInputEvent(event) {

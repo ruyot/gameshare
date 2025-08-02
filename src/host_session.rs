@@ -45,6 +45,16 @@ impl HostSessionManager {
             crate::signaling::SignalingMessage::Offer { sdp, session_id } => {
                 info!("Received offer for session: {}", session_id);
                 let streamer = self.get_or_create(&session_id).await?;
+                
+                // Perfect negotiation: Host is "impolite" - ignore offers if we're already in have-local-offer state
+                let pc = streamer.peer_connection();
+                let signaling_state = pc.signaling_state();
+                
+                if signaling_state == webrtc::peer_connection::sdp::sdp_type::RTCSignalingState::HaveLocalOffer {
+                    info!("Ignoring incoming offer in have-local-offer state (impolite peer)");
+                    return Ok(None); // Ignore the offer
+                }
+                
                 streamer.set_remote_description(&sdp, "offer").await?;
                 
                 // Create and send answer

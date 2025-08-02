@@ -81,6 +81,7 @@ impl RemoteSignalingClient {
         info!("Joined session: {}", self.session_id);
 
         // Forward local ICE candidates to the remote signaling server immediately (trickle ICE)
+        #[cfg(target_os = "linux")]
         {
             use webrtc::peer_connection::RTCPeerConnection;
             let write_clone = write.clone();
@@ -121,7 +122,9 @@ impl RemoteSignalingClient {
                         Some(Ok(Message::Text(text))) => {
                             info!("Received message: {}", text);
                             if let Ok(remote_msg) = serde_json::from_str::<RemoteSignalingMessage>(&text) {
+                                debug!("Successfully parsed message: {:?}", remote_msg);
                                 if let Ok(local_msg) = Self::convert_remote_to_local(remote_msg) {
+                                    debug!("Converted to local message: {:?}", local_msg);
                                     // Forward to host manager and get response
                                     match self.host_mgr.handle_signaling_message(local_msg).await {
                                         Ok(Some(response_msg)) => {
@@ -145,6 +148,9 @@ impl RemoteSignalingClient {
                                         }
                                     }
                                 }
+                            } else {
+                                error!("Failed to parse signaling message: {}", text);
+                                debug!("Raw message that failed to parse: {}", text);
                             }
                         }
                         Some(Ok(Message::Close(_))) => {
