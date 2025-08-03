@@ -83,8 +83,6 @@ impl Encoder {
                     "-maxrate", &format!("{}k", self.config.target_bitrate),
                     "-bufsize", &format!("{}k", self.config.target_bitrate / 2),
                     "-g", &self.config.encoding.keyframe_interval.to_string(),
-                    "-keyint_min", &self.config.encoding.keyframe_interval.to_string(), // Minimum GOP size
-                    "-forced-idr", "1", // Force IDR frames for NVENC
                     "-bf", "0", // No B-frames for low latency
                     "-refs", "1",
                     "-spatial-aq", "1",
