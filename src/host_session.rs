@@ -7,7 +7,7 @@ use {
     anyhow::Result,
     std::{collections::HashMap, sync::Arc},
     tokio::sync::Mutex,
-    tracing::{info, error},
+    tracing::{info, error, debug},
     webrtc::peer_connection::signaling_state::RTCSignalingState,
 };
 

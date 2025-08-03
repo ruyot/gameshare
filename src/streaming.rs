@@ -136,8 +136,8 @@ impl WebRTCStreamer {
         ));
 
         // Add video track to peer connection
-        let rtp_sender = peer_connection.add_track(video_track.clone()).await?;
-        info!("Added video track to peer connection, RTP sender ID: {:?}", rtp_sender.id());
+        let _rtp_sender = peer_connection.add_track(video_track.clone()).await?;
+        info!("Added video track to peer connection");
 
         // Create audio track if enabled
         let audio_track = if config.capture.capture_audio {
@@ -215,12 +215,9 @@ impl WebRTCStreamer {
         tokio::spawn(async move {
             let mut pts = 0u64;
             info!("Frame sending task started");
-            let start_time = std::time::Instant::now();
             while let Some(frame) = frame_receiver.recv().await {
-                let elapsed = start_time.elapsed();
                 let sample = Sample {
                     data: Bytes::from(frame.data),
-                    timestamp: elapsed,
                     duration: Duration::from_millis(33),
                     ..Default::default()
                 };
