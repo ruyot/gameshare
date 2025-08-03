@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebRTC H.264 Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+        .section {
+            flex: 1;
+            border: 1px solid #ccc;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        video {
+            width: 100%;
+            max-width: 640px;
+            background: #000;
+            border: 2px solid #333;
+        }
+        .stats {
+            font-family: monospace;
+            font-size: 12px;
+            background: #f5f5f5;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 3px;
+            white-space: pre-wrap;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+        .warning {
+            color: orange;
+        }
+        #log {
+            max-height: 300px;
+            overflow-y: auto;
+            background: #f0f0f0;
+            padding: 10px;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>WebRTC H.264 Stream Test</h1>
+    
+    <div class="container">
+        <div class="section">
+            <h2>Connection</h2>
+            <input type="text" id="signalingUrl" value="wss://gameshare-clientview.fly.dev/signaling?session=test" style="width: 100%;">
+            <br><br>
+            <button id="connectBtn">Connect</button>
+            <button id="disconnectBtn" disabled>Disconnect</button>
+            <div id="connectionStatus" class="stats">Disconnected</div>
+        </div>
+        
+        <div class="section">
+            <h2>Video Stream</h2>
+            <video id="remoteVideo" autoplay playsinline controls></video>
+            <div id="videoStats" class="stats">No video</div>
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2>Debug Log</h2>
+        <div id="log"></div>
+    </div>
+
+    <script>
+        let pc = null;
+        let ws = null;
+        let statsInterval = null;
+        
+        const log = (msg, type = 'info') => {
+            const timestamp = new Date().toISOString().substr(11, 12);
+            const logEl = document.getElementById('log');
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : '';
+            logEl.innerHTML += `<div class="${className}">[${timestamp}] ${msg}</div>`;
+            logEl.scrollTop = logEl.scrollHeight;
+            console.log(msg);
+        };
+
+        const updateConnectionStatus = (status) => {
+            document.getElementById('connectionStatus').textContent = status;
+        };
+
+        const connect = async () => {
+            try {
+                log('Connecting to signaling server...');
+                const url = document.getElementById('signalingUrl').value;
+                
+                ws = new WebSocket(url);
+                
+                ws.onopen = () => {
+                    log('Connected to signaling server', 'success');
+                    updateConnectionStatus('Connected to signaling server');
+                    document.getElementById('connectBtn').disabled = true;
+                    document.getElementById('disconnectBtn').disabled = false;
+                    
+                    // Send join message
+                    ws.send(JSON.stringify({ type: 'join', client_type: 'client' }));
+                };
+
+                ws.onmessage = async (event) => {
+                    const msg = JSON.parse(event.data);
+                    log(`Received: ${msg.type}`);
+                    
+                    switch (msg.type) {
+                        case 'joined':
+                            log('Joined session successfully', 'success');
+                            await setupPeerConnection();
+                            break;
+                        case 'offer':
+                            await handleOffer(msg);
+                            break;
+                        case 'ice-candidate':
+                            await handleIceCandidate(msg);
+                            break;
+                        default:
+                            log(`Unknown message type: ${msg.type}`, 'warning');
+                    }
+                };
+
+                ws.onerror = (error) => {
+                    log(`WebSocket error: ${error}`, 'error');
+                };
+
+                ws.onclose = () => {
+                    log('WebSocket closed');
+                    disconnect();
+                };
+
+            } catch (error) {
+                log(`Connection failed: ${error.message}`, 'error');
+            }
+        };
+
+        const setupPeerConnection = async () => {
+            log('Setting up peer connection...');
+            
+            pc = new RTCPeerConnection({
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' }
+                ]
+            });
+
+            pc.ontrack = (event) => {
+                log(`Received track: ${event.track.kind} (id: ${event.track.id})`, 'success');
+                if (event.track.kind === 'video') {
+                    const video = document.getElementById('remoteVideo');
+                    video.srcObject = event.streams[0];
+                    log(`Video srcObject set. Stream active: ${event.streams[0].active}`);
+                    
+                    // Monitor video element events
+                    video.addEventListener('loadstart', () => log('Video: loadstart'));
+                    video.addEventListener('loadedmetadata', () => {
+                        log(`Video: loadedmetadata - ${video.videoWidth}x${video.videoHeight}`, 'success');
+                        updateVideoInfo();
+                    });
+                    video.addEventListener('loadeddata', () => log('Video: loadeddata', 'success'));
+                    video.addEventListener('canplay', () => log('Video: canplay', 'success'));
+                    video.addEventListener('playing', () => log('Video: playing', 'success'));
+                    video.addEventListener('error', (e) => {
+                        const error = video.error;
+                        log(`Video error: ${error?.message || 'Unknown'} (code: ${error?.code})`, 'error');
+                    });
+                    video.addEventListener('stalled', () => log('Video stalled', 'warning'));
+                    video.addEventListener('waiting', () => log('Video waiting', 'warning'));
+                }
+            };
+
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    log(`Sending ICE candidate: ${event.candidate.candidate}`);
+                    ws.send(JSON.stringify({
+                        type: 'ice-candidate',
+                        candidate: event.candidate.candidate,
+                        sdp_mid: event.candidate.sdpMid,
+                        sdp_mline_index: event.candidate.sdpMLineIndex
+                    }));
+                }
+            };
+
+            pc.onconnectionstatechange = () => {
+                log(`Connection state: ${pc.connectionState}`);
+                updateConnectionStatus(`WebRTC: ${pc.connectionState}`);
+            };
+
+            pc.oniceconnectionstatechange = () => {
+                log(`ICE connection state: ${pc.iceConnectionState}`);
+            };
+
+            pc.onsignalingstatechange = () => {
+                log(`Signaling state: ${pc.signalingState}`);
+            };
+
+            // Start collecting stats
+            startStatsCollection();
+        };
+
+        const handleOffer = async (msg) => {
+            log('Processing offer...');
+            
+            await pc.setRemoteDescription(new RTCSessionDescription({
+                type: 'offer',
+                sdp: msg.sdp
+            }));
+            
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            
+            ws.send(JSON.stringify({
+                type: 'answer',
+                sdp: answer.sdp,
+                session_id: msg.session_id
+            }));
+            
+            log('Answer sent', 'success');
+        };
+
+        const handleIceCandidate = async (msg) => {
+            log('Adding remote ICE candidate');
+            try {
+                await pc.addIceCandidate(new RTCIceCandidate({
+                    candidate: msg.candidate,
+                    sdpMid: msg.sdp_mid,
+                    sdpMLineIndex: msg.sdp_mline_index
+                }));
+            } catch (error) {
+                log(`Failed to add ICE candidate: ${error.message}`, 'error');
+            }
+        };
+
+        const updateVideoInfo = () => {
+            const video = document.getElementById('remoteVideo');
+            const stats = document.getElementById('videoStats');
+            
+            if (video.videoWidth > 0) {
+                stats.innerHTML = `Resolution: ${video.videoWidth}x${video.videoHeight}
+Ready State: ${video.readyState}
+Network State: ${video.networkState}`;
+            } else {
+                stats.innerHTML = 'Video dimensions: 0x0 (No video data)';
+            }
+        };
+
+        const startStatsCollection = () => {
+            let lastBytes = 0;
+            let lastFrames = 0;
+            let lastTime = Date.now();
+            
+            statsInterval = setInterval(async () => {
+                if (!pc || pc.connectionState !== 'connected') return;
+                
+                try {
+                    const stats = await pc.getStats();
+                    stats.forEach(report => {
+                        if (report.type === 'inbound-rtp' && report.kind === 'video') {
+                            const currentTime = Date.now();
+                            const timeDiff = (currentTime - lastTime) / 1000;
+                            
+                            const packetsReceived = report.packetsReceived || 0;
+                            const bytesReceived = report.bytesReceived || 0;
+                            const framesDecoded = report.framesDecoded || 0;
+                            
+                            // Calculate rates
+                            const bitrate = lastBytes > 0 ? Math.round((bytesReceived - lastBytes) * 8 / timeDiff / 1000) : 0;
+                            const fps = lastFrames > 0 ? Math.round((framesDecoded - lastFrames) / timeDiff) : 0;
+                            
+                            const statsEl = document.getElementById('videoStats');
+                            const video = document.getElementById('remoteVideo');
+                            
+                            statsEl.innerHTML = `Resolution: ${video.videoWidth}x${video.videoHeight}
+Packets: ${packetsReceived}
+Bytes: ${(bytesReceived / 1024 / 1024).toFixed(2)} MB
+Frames Decoded: ${framesDecoded}
+Bitrate: ${bitrate} kbps
+FPS: ${fps}`;
+                            
+                            // Check for issues
+                            if (packetsReceived > 0 && framesDecoded === 0) {
+                                log('⚠️ Receiving packets but no frames decoded!', 'warning');
+                            }
+                            
+                            if (packetsReceived === 0 && pc.iceConnectionState === 'connected') {
+                                log('⚠️ Connected but no packets received!', 'warning');
+                            }
+                            
+                            lastBytes = bytesReceived;
+                            lastFrames = framesDecoded;
+                            lastTime = currentTime;
+                        }
+                    });
+                } catch (error) {
+                    log(`Stats error: ${error.message}`, 'error');
+                }
+                
+                updateVideoInfo();
+            }, 1000);
+        };
+
+        const disconnect = () => {
+            log('Disconnecting...');
+            
+            if (statsInterval) {
+                clearInterval(statsInterval);
+                statsInterval = null;
+            }
+            
+            if (pc) {
+                pc.close();
+                pc = null;
+            }
+            
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+            
+            document.getElementById('connectionStatus').textContent = 'Disconnected';
+            document.getElementById('connectBtn').disabled = false;
+            document.getElementById('disconnectBtn').disabled = true;
+            
+            const video = document.getElementById('remoteVideo');
+            video.srcObject = null;
+            
+            document.getElementById('videoStats').innerHTML = 'No video';
+        };
+
+        document.getElementById('connectBtn').addEventListener('click', connect);
+        document.getElementById('disconnectBtn').addEventListener('click', disconnect);
+    </script>
+</body>
+</html>

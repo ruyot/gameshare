@@ -32,6 +32,13 @@ bytes = "1.5"
 # Video/Audio processing  
 # ffmpeg-next = "7.0"  # Commented out for Windows compatibility
 
+# GStreamer dependencies (alternative to FFmpeg)
+gstreamer = "0.21"
+gstreamer-app = "0.21"
+gstreamer-video = "0.21"
+gstreamer-webrtc = "0.21"
+gstreamer-sdp = "0.21"
+
 # Logging and error handling
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
