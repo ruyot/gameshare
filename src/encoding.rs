@@ -105,11 +105,10 @@ impl Encoder {
             }
         }
 
-        // Output configuration
+        // Output configuration - Output H.264 Annex B format for WebRTC
         ffmpeg_cmd.args(&[
             "-f", "h264",
-            "-flags", "+global_header",
-            "-fflags", "+nobuffer",
+            "-bsf:v", "h264_mp4toannexb",  // Ensure proper NAL unit formatting
             "-"
         ]);
 
@@ -179,6 +178,7 @@ impl Encoder {
         use tokio::io::AsyncReadExt;
 
         let mut buffer = vec![0u8; 65536]; // 64KB buffer
+        let mut accumulated = Vec::new();
         let mut pts = 0i64;
 
         loop {
@@ -188,24 +188,53 @@ impl Encoder {
                     break;
                 }
                 Ok(bytes_read) => {
-                    let data = buffer[..bytes_read].to_vec();
+                    // Accumulate data
+                    accumulated.extend_from_slice(&buffer[..bytes_read]);
                     
-                    // Simple keyframe detection (look for I-frame NAL units)
-                    let is_keyframe = Self::is_keyframe(&data);
+                    // Parse NAL units from accumulated data
+                    let (nal_units, remaining_data) = Self::extract_nal_units_with_remainder(&accumulated);
+                    
+                    for nal_data in nal_units {
+                        if nal_data.len() < 4 {
+                            continue; // Skip invalid NAL units
+                        }
+                        
+                        let is_keyframe = Self::is_keyframe(&nal_data);
+                        
+                        // Log NAL unit details every second
+                        if pts % 30 == 0 {
+                            let nal_type = if nal_data.len() > 4 {
+                                nal_data[3] & 0x1F
+                            } else {
+                                0
+                            };
+                            debug!("Sending NAL unit #{}: type={}, size={}, keyframe={}", 
+                                   pts, nal_type, nal_data.len(), is_keyframe);
+                        }
+                        
+                        let encoded_frame = EncodedFrame {
+                            data: nal_data,
+                            timestamp: std::time::Instant::now(),
+                            is_keyframe,
+                            pts,
+                        };
 
-                    let encoded_frame = EncodedFrame {
-                        data,
-                        timestamp: std::time::Instant::now(),
-                        is_keyframe,
-                        pts,
-                    };
-
-                    if encoded_tx.send(encoded_frame).await.is_err() {
-                        debug!("Encoded frame receiver dropped, stopping encoding");
-                        break;
+                        if encoded_tx.send(encoded_frame).await.is_err() {
+                            debug!("Encoded frame receiver dropped, stopping encoding");
+                            return;
+                        }
+                        
+                        pts += 1;
                     }
-
-                    pts += 1;
+                    
+                    // Keep only the unparsed remainder
+                    accumulated = remaining_data;
+                    
+                    // Prevent buffer from growing too large
+                    if accumulated.len() > 1024 * 1024 { // 1MB limit
+                        error!("NAL unit buffer overflow, clearing");
+                        accumulated.clear();
+                    }
                 }
                 Err(e) => {
                     error!("Error reading from encoder: {}", e);
@@ -215,6 +244,63 @@ impl Encoder {
         }
     }
 
+    fn extract_nal_units_with_remainder(data: &[u8]) -> (Vec<Vec<u8>>, Vec<u8>) {
+        let mut nal_units = Vec::new();
+        let mut i = 0;
+        let mut last_complete_nal_end = 0;
+        
+        while i < data.len() {
+            // Look for start code (0x00 0x00 0x01 or 0x00 0x00 0x00 0x01)
+            if i + 3 <= data.len() && data[i] == 0x00 && data[i+1] == 0x00 {
+                let start_code_len = if i + 4 <= data.len() && data[i+2] == 0x00 && data[i+3] == 0x01 {
+                    4 // 4-byte start code
+                } else if data[i+2] == 0x01 {
+                    3 // 3-byte start code
+                } else {
+                    i += 1;
+                    continue;
+                };
+                
+                // Find the next start code
+                let mut end_pos = i + start_code_len;
+                let mut found_next = false;
+                
+                while end_pos + 3 < data.len() {
+                    if data[end_pos] == 0x00 && data[end_pos+1] == 0x00 && 
+                       (data[end_pos+2] == 0x01 || (end_pos + 3 < data.len() && data[end_pos+2] == 0x00 && data[end_pos+3] == 0x01)) {
+                        found_next = true;
+                        break;
+                    }
+                    end_pos += 1;
+                }
+                
+                if found_next {
+                    // We found a complete NAL unit
+                    let nal_unit = data[i..end_pos].to_vec();
+                    if nal_unit.len() > 4 {
+                        nal_units.push(nal_unit);
+                    }
+                    last_complete_nal_end = end_pos;
+                    i = end_pos;
+                } else {
+                    // This might be an incomplete NAL unit at the end
+                    break;
+                }
+            } else {
+                i += 1;
+            }
+        }
+        
+        // Return the NAL units and any remaining incomplete data
+        let remainder = if last_complete_nal_end < data.len() {
+            data[last_complete_nal_end..].to_vec()
+        } else {
+            Vec::new()
+        };
+        
+        (nal_units, remainder)
+    }
+    
     fn is_keyframe(data: &[u8]) -> bool {
         // Look for H.264 I-frame NAL unit (type 5)
         for window in data.windows(4) {
