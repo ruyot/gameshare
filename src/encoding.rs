@@ -77,19 +77,12 @@ impl Encoder {
                     "-c:v", "h264_nvenc",
                     "-preset", "llhq", // Low latency high quality
                     "-profile:v", "baseline",
-                    "-level", "3.1",
                     "-rc", "cbr",
                     "-b:v", &format!("{}k", self.config.target_bitrate),
                     "-maxrate", &format!("{}k", self.config.target_bitrate),
                     "-bufsize", &format!("{}k", self.config.target_bitrate / 2),
                     "-g", &self.config.encoding.keyframe_interval.to_string(),
                     "-bf", "0", // No B-frames for low latency
-                    "-refs", "1",
-                    "-spatial-aq", "1",
-                    "-temporal-aq", "1",
-                    "-rc-lookahead", "0",
-                    "-delay", "0",
-                    "-flags2", "+local_header",  // Include SPS/PPS with keyframes
                 ]);
             },
             EncoderType::X264 => {
@@ -120,14 +113,7 @@ impl Encoder {
             "-force_key_frames", "expr:gte(t,n_forced*1)",  // Force keyframe every 1 second
         ]);
         
-        // Output configuration - Output H.264 Annex B format for WebRTC
-        ffmpeg_cmd.args(&[
-            "-f", "h264",
-            "-bsf:v", "h264_mp4toannexb,dump_extra",  // Include SPS/PPS
-            "-"
-        ]);
-
-        // Low latency flags
+        // Low latency flags (must come before output specification)
         if self.config.encoding.low_latency {
             ffmpeg_cmd.args(&[
                 "-flags", "low_delay",
@@ -136,6 +122,13 @@ impl Encoder {
                 "-analyzeduration", "0",
             ]);
         }
+        
+        // Output configuration - Output H.264 Annex B format for WebRTC
+        ffmpeg_cmd.args(&[
+            "-f", "h264",
+            "-bsf:v", "h264_mp4toannexb,dump_extra",  // Include SPS/PPS
+            "-"
+        ]);
 
         debug!("Starting encoder with command: {:?}", ffmpeg_cmd);
 
@@ -151,11 +144,15 @@ impl Encoder {
 
         let stdout = ffmpeg_process.stdout.take()
             .ok_or_else(|| GameShareError::encoding("Failed to get encoder stdout"))?;
+            
+        let stderr = ffmpeg_process.stderr.take()
+            .ok_or_else(|| GameShareError::encoding("Failed to get encoder stderr"))?;
 
         // Spawn tasks for frame input and encoded output
         let config = self.config.clone();
         tokio::spawn(Self::frame_input_task(stdin, frame_rx, config.clone()));
         tokio::spawn(Self::encoded_output_task(stdout, encoded_tx, config));
+        tokio::spawn(Self::stderr_task(stderr));
 
         self.ffmpeg_process = Some(ffmpeg_process);
         self.frame_sender = Some(frame_tx);
@@ -185,6 +182,20 @@ impl Encoder {
         }
     }
 
+    async fn stderr_task(mut stderr: process::ChildStderr) {
+        use tokio::io::AsyncBufReadExt;
+        use tokio::io::BufReader;
+        
+        let reader = BufReader::new(stderr);
+        let mut lines = reader.lines();
+        
+        while let Some(line) = lines.next_line().await.ok().flatten() {
+            if !line.trim().is_empty() {
+                error!("FFmpeg stderr: {}", line);
+            }
+        }
+    }
+    
     async fn encoded_output_task(
         mut stdout: process::ChildStdout,
         encoded_tx: tokio::sync::mpsc::Sender<EncodedFrame>,
