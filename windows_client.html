@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GameShare Client - Windows WebRTC Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-primary {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background-color: #45a049;
+        }
+        .btn-danger {
+            background-color: #f44336;
+            color: white;
+        }
+        #status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status-connected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status-disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .status-connecting {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        #remoteVideo {
+            width: 100%;
+            max-width: 100%;
+            margin: 20px auto;
+            display: block;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            background: #000;
+        }
+        .stats {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .hidden {
+            display: none;
+        }
+        input {
+            padding: 8px 12px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>GameShare Client - View Screen Share</h1>
+        
+        <div id="status" class="status-disconnected">Not Connected</div>
+        
+        <div class="controls">
+            <input type="text" id="sessionInput" placeholder="Session ID" value="default-session">
+            <button id="connectBtn" class="btn-primary">Connect</button>
+            <button id="disconnectBtn" class="btn-danger" disabled>Disconnect</button>
+        </div>
+        
+        <video id="remoteVideo" autoplay playsinline class="hidden"></video>
+        
+        <div id="stats" class="stats hidden">
+            <h3>Connection Statistics</h3>
+            <div id="statsContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const SIGNALING_URL = 'wss://gameshare-clientview.fly.dev/signaling';
+        
+        // WebRTC configuration
+        const rtcConfig = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                {
+                    urls: ['turn:global.relay.metered.ca:80', 'turn:global.relay.metered.ca:443?transport=tcp'],
+                    username: 'f5e9b6f5df726ad6e7f4e8e9',
+                    credential: 'Gk4EhT4xJCdXgY8p'
+                }
+            ]
+        };
+        
+        let peerConnection = null;
+        let signalingSocket = null;
+        let statsInterval = null;
+        
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const sessionInput = document.getElementById('sessionInput');
+        const remoteVideo = document.getElementById('remoteVideo');
+        const status = document.getElementById('status');
+        const statsDiv = document.getElementById('stats');
+        
+        // Update status display
+        function updateStatus(text, state) {
+            status.textContent = text;
+            status.className = `status-${state}`;
+        }
+        
+        // Connect to session
+        async function connect() {
+            const sessionId = sessionInput.value || 'default-session';
+            
+            try {
+                updateStatus('Connecting...', 'connecting');
+                
+                // Connect to signaling
+                await connectSignaling(sessionId);
+                
+                // Update UI
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                sessionInput.disabled = true;
+                
+            } catch (error) {
+                console.error('Error connecting:', error);
+                updateStatus('Failed to connect: ' + error.message, 'disconnected');
+            }
+        }
+        
+        // Disconnect from session
+        function disconnect() {
+            if (peerConnection) {
+                peerConnection.close();
+                peerConnection = null;
+            }
+            
+            if (signalingSocket) {
+                signalingSocket.close();
+                signalingSocket = null;
+            }
+            
+            if (statsInterval) {
+                clearInterval(statsInterval);
+                statsInterval = null;
+            }
+            
+            remoteVideo.srcObject = null;
+            remoteVideo.classList.add('hidden');
+            statsDiv.classList.add('hidden');
+            
+            connectBtn.disabled = false;
+            disconnectBtn.disabled = true;
+            sessionInput.disabled = false;
+            
+            updateStatus('Not Connected', 'disconnected');
+        }
+        
+        // Connect to signaling server
+        async function connectSignaling(sessionId) {
+            return new Promise((resolve, reject) => {
+                const wsUrl = `${SIGNALING_URL}?session=${sessionId}`;
+                console.log('Connecting to signaling server:', wsUrl);
+                
+                signalingSocket = new WebSocket(wsUrl);
+                
+                signalingSocket.onopen = () => {
+                    console.log('Connected to signaling server');
+                    
+                    // Join as client
+                    signalingSocket.send(JSON.stringify({
+                        type: 'join',
+                        session_id: sessionId,
+                        client_type: 'client'
+                    }));
+                    
+                    updateStatus('Connected - Waiting for host', 'connecting');
+                    resolve();
+                };
+                
+                signalingSocket.onmessage = async (event) => {
+                    const message = JSON.parse(event.data);
+                    console.log('Received signaling message:', message);
+                    
+                    switch (message.type) {
+                        case 'joined':
+                            console.log('Successfully joined session');
+                            break;
+                            
+                        case 'offer':
+                            console.log('Received offer from host');
+                            await handleOffer(message, sessionId);
+                            break;
+                            
+                        case 'ice-candidate':
+                            console.log('Received ICE candidate');
+                            await handleIceCandidate(message);
+                            break;
+                    }
+                };
+                
+                signalingSocket.onerror = (error) => {
+                    console.error('Signaling error:', error);
+                    reject(error);
+                };
+                
+                signalingSocket.onclose = () => {
+                    console.log('Signaling connection closed');
+                    disconnect();
+                };
+            });
+        }
+        
+        // Handle offer from host
+        async function handleOffer(message, sessionId) {
+            try {
+                // Create peer connection
+                peerConnection = new RTCPeerConnection(rtcConfig);
+                
+                // Handle incoming stream
+                peerConnection.ontrack = (event) => {
+                    console.log('Received remote stream');
+                    remoteVideo.srcObject = event.streams[0];
+                    remoteVideo.classList.remove('hidden');
+                    updateStatus('Connected - Viewing stream', 'connected');
+                };
+                
+                // Handle ICE candidates
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        console.log('Sending ICE candidate');
+                        signalingSocket.send(JSON.stringify({
+                            type: 'ice-candidate',
+                            session_id: sessionId,
+                            candidate: event.candidate.candidate,
+                            sdp_mid: event.candidate.sdpMid,
+                            sdp_mline_index: event.candidate.sdpMLineIndex,
+                            client_type: 'client'
+                        }));
+                    }
+                };
+                
+                // Monitor connection state
+                peerConnection.onconnectionstatechange = () => {
+                    console.log('Connection state:', peerConnection.connectionState);
+                    if (peerConnection.connectionState === 'connected') {
+                        startStatsMonitoring();
+                    } else if (peerConnection.connectionState === 'failed') {
+                        updateStatus('Connection failed', 'disconnected');
+                    }
+                };
+                
+                // Set remote description
+                const offer = new RTCSessionDescription({
+                    type: 'offer',
+                    sdp: message.sdp
+                });
+                await peerConnection.setRemoteDescription(offer);
+                
+                // Create answer
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+                
+                // Send answer
+                console.log('Sending answer');
+                signalingSocket.send(JSON.stringify({
+                    type: 'answer',
+                    session_id: sessionId,
+                    sdp: answer.sdp,
+                    client_type: 'client'
+                }));
+                
+            } catch (error) {
+                console.error('Error handling offer:', error);
+            }
+        }
+        
+        // Handle ICE candidate
+        async function handleIceCandidate(message) {
+            try {
+                if (!peerConnection) {
+                    console.warn('No peer connection, ignoring ICE candidate');
+                    return;
+                }
+                
+                const candidate = new RTCIceCandidate({
+                    candidate: message.candidate,
+                    sdpMid: message.sdp_mid,
+                    sdpMLineIndex: message.sdp_mline_index
+                });
+                await peerConnection.addIceCandidate(candidate);
+                console.log('ICE candidate added');
+            } catch (error) {
+                console.error('Error adding ICE candidate:', error);
+            }
+        }
+        
+        // Monitor connection statistics
+        function startStatsMonitoring() {
+            statsDiv.classList.remove('hidden');
+            
+            statsInterval = setInterval(async () => {
+                if (!peerConnection) return;
+                
+                const stats = await peerConnection.getStats();
+                let statsHtml = '';
+                
+                stats.forEach(report => {
+                    if (report.type === 'inbound-rtp' && report.kind === 'video') {
+                        statsHtml += `
+                            <p><strong>Video Stream:</strong></p>
+                            <ul>
+                                <li>Bytes received: ${(report.bytesReceived / 1024 / 1024).toFixed(2)} MB</li>
+                                <li>Packets received: ${report.packetsReceived}</li>
+                                <li>Packets lost: ${report.packetsLost || 0}</li>
+                                <li>Framerate: ${report.framesPerSecond || 0} fps</li>
+                                <li>Frames decoded: ${report.framesDecoded || 0}</li>
+                                <li>Jitter: ${(report.jitter * 1000).toFixed(2)} ms</li>
+                            </ul>
+                        `;
+                    }
+                });
+                
+                document.getElementById('statsContent').innerHTML = statsHtml || '<p>No stats available yet</p>';
+            }, 1000);
+        }
+        
+        // Event listeners
+        connectBtn.addEventListener('click', connect);
+        disconnectBtn.addEventListener('click', disconnect);
+        
+        sessionInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !connectBtn.disabled) {
+                connect();
+            }
+        });
+        
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+            disconnect();
+        });
+    </script>
+</body>
+</html>

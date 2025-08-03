@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GameShare - Windows WebRTC Screen Sharing</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 40px;
+        }
+        .button-container {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-bottom: 40px;
+        }
+        .button {
+            display: inline-block;
+            padding: 20px 40px;
+            font-size: 18px;
+            text-decoration: none;
+            color: white;
+            border-radius: 8px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            min-width: 200px;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .host-button {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+        }
+        .client-button {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+        }
+        .info {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+            text-align: left;
+        }
+        .info h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .info ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .info li {
+            margin: 5px 0;
+            color: #666;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            margin-top: 20px;
+        }
+        .status-ready {
+            background: #d4edda;
+            color: #155724;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>GameShare WebRTC Screen Sharing</h1>
+        <p class="subtitle">Share your screen directly through the browser - no installation required!</p>
+        
+        <div class="button-container">
+            <a href="windows_host.html" class="button host-button">
+                <strong>Start as Host</strong><br>
+                <small>Share your screen</small>
+            </a>
+            <a href="windows_client.html" class="button client-button">
+                <strong>Join as Client</strong><br>
+                <small>View shared screen</small>
+            </a>
+        </div>
+        
+        <div class="info">
+            <h3>How to use:</h3>
+            <ul>
+                <li><strong>Host:</strong> Click "Start as Host" to share your screen with others</li>
+                <li><strong>Client:</strong> Click "Join as Client" to view someone's shared screen</li>
+                <li>Both host and client use the same session ID (default: "default-session")</li>
+                <li>The connection is peer-to-peer through WebRTC for low latency</li>
+            </ul>
+            
+            <h3>Features:</h3>
+            <ul>
+                <li>✓ No software installation required - runs in browser</li>
+                <li>✓ Works on Windows, Mac, and Linux</li>
+                <li>✓ Low latency peer-to-peer connection</li>
+                <li>✓ Secure WebRTC encryption</li>
+                <li>✓ Real-time statistics monitoring</li>
+            </ul>
+        </div>
+        
+        <div class="status status-ready">
+            Server running at http://localhost:8080
+        </div>
+    </div>
+</body>
+</html>
