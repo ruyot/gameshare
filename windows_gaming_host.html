@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GameShare Host - Remote Gaming</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+        .container {
+            background: #2a2a2a;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.5);
+        }
+        h1 {
+            color: #fff;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #aaa;
+            margin-bottom: 30px;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-primary {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background-color: #45a049;
+            transform: translateY(-2px);
+        }
+        .btn-danger {
+            background-color: #f44336;
+            color: white;
+        }
+        .btn-danger:hover:not(:disabled) {
+            background-color: #da190b;
+        }
+        #status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .status-connected {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .status-disconnected {
+            background-color: #f44336;
+            color: white;
+        }
+        .status-connecting {
+            background-color: #ff9800;
+            color: white;
+        }
+        #preview {
+            width: 100%;
+            max-width: 100%;
+            margin: 20px auto;
+            display: block;
+            border: 2px solid #444;
+            border-radius: 5px;
+            background: #000;
+        }
+        .stats {
+            background: #333;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #aaa;
+        }
+        .hidden {
+            display: none;
+        }
+        #sessionId {
+            font-family: monospace;
+            background: #333;
+            padding: 5px 10px;
+            border-radius: 3px;
+        }
+        .info-box {
+            background: #333;
+            border-left: 4px solid #4CAF50;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .input-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: rgba(76, 175, 80, 0.9);
+            color: white;
+            border-radius: 5px;
+            font-weight: bold;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 GameShare Host - Remote Gaming</h1>
+        <p class="subtitle">Share your game and let others control it remotely!</p>
+        
+        <div id="status" class="status-disconnected">Not Connected</div>
+        
+        <div class="controls">
+            <button id="startBtn" class="btn-primary">Start Game Sharing</button>
+            <button id="stopBtn" class="btn-danger" disabled>Stop Sharing</button>
+            <div>
+                Session ID: <span id="sessionId">default-session</span>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <strong>Instructions:</strong>
+            <ol>
+                <li>Start your game (e.g., TuxKart) in windowed mode</li>
+                <li>Click "Start Game Sharing" and select the game window</li>
+                <li>Share the session ID with your friend</li>
+                <li>They can now control your game remotely!</li>
+            </ol>
+        </div>
+        
+        <video id="preview" autoplay muted playsinline class="hidden"></video>
+        
+        <div id="inputIndicator" class="input-indicator">Input Received</div>
+        
+        <div id="stats" class="stats hidden">
+            <div class="stat-item">
+                <div class="stat-value" id="fps">0</div>
+                <div class="stat-label">FPS</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="bitrate">0</div>
+                <div class="stat-label">Mbps</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="latency">0</div>
+                <div class="stat-label">Latency (ms)</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="resolution">0x0</div>
+                <div class="stat-label">Resolution</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const SIGNALING_URL = 'wss://gameshare-clientview.fly.dev/signaling';
+        const SESSION_ID = 'default-session';
+        
+        // WebRTC configuration
+        const rtcConfig = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                {
+                    urls: ['turn:global.relay.metered.ca:80', 'turn:global.relay.metered.ca:443?transport=tcp'],
+                    username: 'f5e9b6f5df726ad6e7f4e8e9',
+                    credential: 'Gk4EhT4xJCdXgY8p'
+                }
+            ]
+        };
+        
+        let localStream = null;
+        let peerConnection = null;
+        let signalingSocket = null;
+        let dataChannel = null;
+        let statsInterval = null;
+        
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const preview = document.getElementById('preview');
+        const status = document.getElementById('status');
+        const statsDiv = document.getElementById('stats');
+        const inputIndicator = document.getElementById('inputIndicator');
+        
+        // Update status display
+        function updateStatus(text, state) {
+            status.textContent = text;
+            status.className = `status-${state}`;
+        }
+        
+        // Start game sharing
+        async function startGameShare() {
+            try {
+                updateStatus('Starting screen capture...', 'connecting');
+                
+                // Get display media with higher quality settings for gaming
+                localStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: {
+                        cursor: 'always',
+                        displaySurface: 'window', // Prefer window capture
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 },
+                        frameRate: { ideal: 60 } // Higher framerate for gaming
+                    },
+                    audio: {
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        autoGainControl: false
+                    }
+                });
+                
+                // Show preview
+                preview.srcObject = localStream;
+                preview.classList.remove('hidden');
+                
+                // Handle stream ending
+                localStream.getVideoTracks()[0].addEventListener('ended', () => {
+                    stopGameShare();
+                });
+                
+                // Connect to signaling
+                await connectSignaling();
+                
+                // Connect to input bridge
+                connectInputBridge();
+                
+                // Update UI
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                updateStatus('Connected - Waiting for player', 'connected');
+                
+            } catch (error) {
+                console.error('Error starting game share:', error);
+                updateStatus('Failed to start: ' + error.message, 'disconnected');
+            }
+        }
+        
+        // Stop game sharing
+        function stopGameShare() {
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+            
+            if (dataChannel) {
+                dataChannel.close();
+                dataChannel = null;
+            }
+            
+            if (peerConnection) {
+                peerConnection.close();
+                peerConnection = null;
+            }
+            
+            if (signalingSocket) {
+                signalingSocket.close();
+                signalingSocket = null;
+            }
+            
+            if (statsInterval) {
+                clearInterval(statsInterval);
+                statsInterval = null;
+            }
+            
+            preview.classList.add('hidden');
+            statsDiv.classList.add('hidden');
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            updateStatus('Not Connected', 'disconnected');
+        }
+        
+        // Connect to signaling server
+        async function connectSignaling() {
+            return new Promise((resolve, reject) => {
+                const wsUrl = `${SIGNALING_URL}?session=${SESSION_ID}`;
+                console.log('Connecting to signaling server:', wsUrl);
+                
+                signalingSocket = new WebSocket(wsUrl);
+                
+                signalingSocket.onopen = () => {
+                    console.log('Connected to signaling server');
+                    
+                    // Join as host
+                    signalingSocket.send(JSON.stringify({
+                        type: 'join',
+                        session_id: SESSION_ID,
+                        client_type: 'host'
+                    }));
+                    
+                    resolve();
+                };
+                
+                signalingSocket.onmessage = async (event) => {
+                    const message = JSON.parse(event.data);
+                    console.log('Received signaling message:', message);
+                    
+                    switch (message.type) {
+                        case 'joined':
+                            console.log('Successfully joined session');
+                            break;
+                            
+                        case 'participant-joined':
+                            console.log('Player joined, creating offer...');
+                            await createOffer();
+                            break;
+                            
+                        case 'answer':
+                            console.log('Received answer');
+                            await handleAnswer(message);
+                            break;
+                            
+                        case 'ice-candidate':
+                            console.log('Received ICE candidate');
+                            await handleIceCandidate(message);
+                            break;
+                    }
+                };
+                
+                signalingSocket.onerror = (error) => {
+                    console.error('Signaling error:', error);
+                    reject(error);
+                };
+                
+                signalingSocket.onclose = () => {
+                    console.log('Signaling connection closed');
+                };
+            });
+        }
+        
+        // Create WebRTC offer
+        async function createOffer() {
+            try {
+                // Create peer connection
+                peerConnection = new RTCPeerConnection(rtcConfig);
+                
+                // Create data channel for input
+                dataChannel = peerConnection.createDataChannel('input', {
+                    ordered: true,
+                    maxRetransmits: 0 // Low latency for gaming
+                });
+                
+                dataChannel.onopen = () => {
+                    console.log('Data channel opened');
+                    updateStatus('Connected - Player can control the game!', 'connected');
+                };
+                
+                dataChannel.onmessage = (event) => {
+                    handleInputMessage(JSON.parse(event.data));
+                };
+                
+                // Add stream tracks with encoding parameters for gaming
+                localStream.getTracks().forEach(track => {
+                    const sender = peerConnection.addTrack(track, localStream);
+                    
+                    // Set encoding parameters for better gaming performance
+                    if (track.kind === 'video') {
+                        const params = sender.getParameters();
+                        if (!params.encodings) {
+                            params.encodings = [{}];
+                        }
+                        params.encodings[0].maxBitrate = 8000000; // 8 Mbps
+                        params.encodings[0].maxFramerate = 60;
+                        sender.setParameters(params);
+                    }
+                });
+                
+                // Handle ICE candidates
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        console.log('Sending ICE candidate');
+                        signalingSocket.send(JSON.stringify({
+                            type: 'ice-candidate',
+                            session_id: SESSION_ID,
+                            candidate: event.candidate.candidate,
+                            sdp_mid: event.candidate.sdpMid,
+                            sdp_mline_index: event.candidate.sdpMLineIndex
+                        }));
+                    }
+                };
+                
+                // Monitor connection state
+                peerConnection.onconnectionstatechange = () => {
+                    console.log('Connection state:', peerConnection.connectionState);
+                    if (peerConnection.connectionState === 'connected') {
+                        startStatsMonitoring();
+                    } else if (peerConnection.connectionState === 'failed') {
+                        updateStatus('Connection failed', 'disconnected');
+                    }
+                };
+                
+                // Create offer
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+                
+                // Send offer
+                console.log('Sending offer');
+                signalingSocket.send(JSON.stringify({
+                    type: 'offer',
+                    session_id: SESSION_ID,
+                    sdp: offer.sdp
+                }));
+                
+            } catch (error) {
+                console.error('Error creating offer:', error);
+            }
+        }
+        
+        // WebSocket connection to input bridge
+        let inputBridgeSocket = null;
+        
+        // Connect to input bridge
+        function connectInputBridge() {
+            const bridgeUrl = 'ws://localhost:8765';
+            console.log('Connecting to input bridge at', bridgeUrl);
+            
+            inputBridgeSocket = new WebSocket(bridgeUrl);
+            
+            inputBridgeSocket.onopen = () => {
+                console.log('Connected to input bridge');
+                updateStatus('Connected - Input bridge ready!', 'connected');
+            };
+            
+            inputBridgeSocket.onerror = (error) => {
+                console.error('Input bridge error:', error);
+                console.warn('Make sure to run: python input_bridge.py');
+            };
+            
+            inputBridgeSocket.onclose = () => {
+                console.log('Input bridge disconnected');
+                inputBridgeSocket = null;
+            };
+        }
+        
+        // Handle input messages from client
+        function handleInputMessage(input) {
+            console.log('Received input:', input);
+            
+            // Show visual indicator
+            inputIndicator.style.display = 'block';
+            setTimeout(() => {
+                inputIndicator.style.display = 'none';
+            }, 100);
+            
+            // Send to input bridge if connected
+            if (inputBridgeSocket && inputBridgeSocket.readyState === WebSocket.OPEN) {
+                inputBridgeSocket.send(JSON.stringify(input));
+            } else {
+                console.warn('Input bridge not connected. Run: python input_bridge.py');
+                // Try to reconnect
+                if (!inputBridgeSocket || inputBridgeSocket.readyState === WebSocket.CLOSED) {
+                    connectInputBridge();
+                }
+            }
+        }
+        
+        // Handle answer from client
+        async function handleAnswer(message) {
+            try {
+                const answer = new RTCSessionDescription({
+                    type: 'answer',
+                    sdp: message.sdp
+                });
+                await peerConnection.setRemoteDescription(answer);
+                console.log('Answer set successfully');
+            } catch (error) {
+                console.error('Error handling answer:', error);
+            }
+        }
+        
+        // Handle ICE candidate
+        async function handleIceCandidate(message) {
+            try {
+                const candidate = new RTCIceCandidate({
+                    candidate: message.candidate,
+                    sdpMid: message.sdp_mid,
+                    sdpMLineIndex: message.sdp_mline_index
+                });
+                await peerConnection.addIceCandidate(candidate);
+                console.log('ICE candidate added');
+            } catch (error) {
+                console.error('Error adding ICE candidate:', error);
+            }
+        }
+        
+        // Monitor connection statistics
+        function startStatsMonitoring() {
+            statsDiv.classList.remove('hidden');
+            
+            statsInterval = setInterval(async () => {
+                if (!peerConnection) return;
+                
+                const stats = await peerConnection.getStats();
+                
+                stats.forEach(report => {
+                    if (report.type === 'outbound-rtp' && report.kind === 'video') {
+                        // FPS
+                        document.getElementById('fps').textContent = 
+                            Math.round(report.framesPerSecond || 0);
+                        
+                        // Bitrate in Mbps
+                        const bitrate = (report.bytesSent * 8) / 1000000;
+                        document.getElementById('bitrate').textContent = 
+                            bitrate.toFixed(2);
+                        
+                        // Resolution
+                        document.getElementById('resolution').textContent = 
+                            `${report.frameWidth}x${report.frameHeight}`;
+                    }
+                    
+                    if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+                        // Latency
+                        const latency = report.currentRoundTripTime * 1000;
+                        document.getElementById('latency').textContent = 
+                            Math.round(latency);
+                    }
+                });
+            }, 1000);
+        }
+        
+        // Event listeners
+        startBtn.addEventListener('click', startGameShare);
+        stopBtn.addEventListener('click', stopGameShare);
+        
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+            stopGameShare();
+        });
+    </script>
+</body>
+</html>

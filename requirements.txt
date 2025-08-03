@@ -1,0 +1,8 @@
+# GameShare Python dependencies
+
+# For input bridge
+websockets>=10.0
+pywin32>=300  # Windows-specific for input simulation
+
+# Optional for better async support
+aiofiles>=0.8.0
