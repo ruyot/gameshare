@@ -91,14 +91,14 @@ async fn main() -> Result<()> {
     info!("About to validate system requirements...");
     validate_system_requirements(&config).await?;
 
+    // Create host manager (shared between both modes)
+    let host_mgr = Arc::new(host_session::HostSessionManager::new(Arc::new(config.clone())));
+    
     // Handle signaling based on mode
     info!("Signaling address: {}", config.signaling_addr);
     let _signaling_handle = if config.signaling_addr.starts_with("ws://") || config.signaling_addr.starts_with("wss://") {
         // Remote signaling mode
         let session_id = std::env::var("SESSION_ID").unwrap_or_else(|_| "default-session".to_string());
-
-        // Create host manager
-        let host_mgr = Arc::new(host_session::HostSessionManager::new(Arc::new(config.clone())));
 
         // Create remote signaling client
         let remote_client = remote_signaling::RemoteSignalingClient::new(
@@ -115,10 +115,8 @@ async fn main() -> Result<()> {
         })
     } else {
         // Local signaling server mode
-        // Create host manager for local mode
-        let host_mgr = Arc::new(host_session::HostSessionManager::new(Arc::new(config.clone())));
         let addr: SocketAddr = config.signaling_addr.parse().expect("Invalid socket address");
-        tokio::spawn(signaling::start_server(addr, host_mgr))
+        tokio::spawn(signaling::start_server(addr, host_mgr.clone()))
     };
 
     #[cfg(target_os = "linux")]
@@ -132,8 +130,8 @@ async fn main() -> Result<()> {
         // Initialize input handler
         let input_handler = input::InputHandler::new(&config).await?;
         
-        // Initialize WebRTC streaming
-        let streamer = streaming::WebRTCStreamer::new(&config, input_handler).await?;
+        // Don't create a standalone streamer - we'll use the ones in host sessions
+        // let streamer = streaming::WebRTCStreamer::new(&config, input_handler).await?;
 
         info!("All systems initialized successfully");
         info!("Waiting for client connections on {}", config.signaling_addr);
@@ -147,8 +145,8 @@ async fn main() -> Result<()> {
             if let Some(frame) = capture_system.capture_frame().await? {
                 // Encode frame
                 if let Some(encoded_frame) = encoder.encode_frame(frame).await? {
-                    // Stream to connected clients
-                    streamer.send_frame(encoded_frame).await?;
+                    // Broadcast to all connected sessions
+                    host_mgr.broadcast_frame(encoded_frame).await?;
                     
                     frame_count += 1;
                     

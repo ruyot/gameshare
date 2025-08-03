@@ -135,6 +135,17 @@ impl HostSessionManager {
             }
         }
     }
+    
+    /// Broadcast a frame to all active sessions
+    pub async fn broadcast_frame(&self, frame: crate::encoding::EncodedFrame) -> Result<()> {
+        let sessions = self.sessions.lock().await;
+        for (session_id, streamer) in sessions.iter() {
+            if let Err(e) = streamer.send_frame(frame.clone()).await {
+                error!("Failed to send frame to session {}: {}", session_id, e);
+            }
+        }
+        Ok(())
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
