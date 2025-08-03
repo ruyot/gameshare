@@ -145,6 +145,10 @@ async fn main() -> Result<()> {
             if let Some(frame) = capture_system.capture_frame().await? {
                 // Encode frame
                 if let Some(encoded_frame) = encoder.encode_frame(frame).await? {
+                    // Log every 5 seconds
+                    if frame_count % (u64::from(config.target_framerate) * 5) == 0 {
+                        debug!("Captured and encoded frame #{}", frame_count);
+                    }
                     // Broadcast to all connected sessions
                     host_mgr.broadcast_frame(encoded_frame).await?;
                     

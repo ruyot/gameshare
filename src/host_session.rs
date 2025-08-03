@@ -81,6 +81,13 @@ impl HostSessionManager {
                 
                 streamer.set_remote_description(&sdp, "answer").await?;
                 info!("Successfully set remote description (answer) for session: {}", session_id);
+                
+                // Log the peer connection state after setting answer
+                let pc = streamer.peer_connection();
+                let conn_state = pc.connection_state();
+                let signaling_state = pc.signaling_state();
+                info!("After setting answer - Connection state: {:?}, Signaling state: {:?}", conn_state, signaling_state);
+                
                 Ok(None)
             }
             crate::signaling::SignalingMessage::IceCandidate { candidate, sdp_mid, sdp_mline_index, session_id } => {
@@ -106,6 +113,15 @@ impl HostSessionManager {
                 info!("Client joined session: {} as {:?}", session_id, client_type);
                 // Create streamer for the session
                 let streamer = self.get_or_create(&session_id).await?;
+                
+                // Log current sessions
+                {
+                    let sessions = self.sessions.lock().await;
+                    info!("Total active sessions after join: {}", sessions.len());
+                    for (id, _) in sessions.iter() {
+                        info!("Active session ID: {}", id);
+                    }
+                }
                 
                 // If this is a client joining, automatically create and send an offer
                 if matches!(client_type, crate::signaling::ClientType::Client) {
@@ -139,6 +155,13 @@ impl HostSessionManager {
     /// Broadcast a frame to all active sessions
     pub async fn broadcast_frame(&self, frame: crate::encoding::EncodedFrame) -> Result<()> {
         let sessions = self.sessions.lock().await;
+        let session_count = sessions.len();
+        if session_count == 0 {
+            // No active sessions to send to
+            return Ok(());
+        }
+        
+        debug!("Broadcasting frame to {} active sessions", session_count);
         for (session_id, streamer) in sessions.iter() {
             if let Err(e) = streamer.send_frame(frame.clone()).await {
                 error!("Failed to send frame to session {}: {}", session_id, e);

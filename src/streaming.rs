@@ -136,7 +136,8 @@ impl WebRTCStreamer {
         ));
 
         // Add video track to peer connection
-        peer_connection.add_track(video_track.clone()).await?;
+        let rtp_sender = peer_connection.add_track(video_track.clone()).await?;
+        info!("Added video track to peer connection, RTP sender ID: {:?}", rtp_sender.id());
 
         // Create audio track if enabled
         let audio_track = if config.capture.capture_audio {
@@ -212,19 +213,27 @@ impl WebRTCStreamer {
         // Spawn frame sending task
         let video_track_clone = video_track.clone();
         tokio::spawn(async move {
-            let mut _pts = 0u64;
+            let mut pts = 0u64;
+            info!("Frame sending task started");
+            let start_time = std::time::Instant::now();
             while let Some(frame) = frame_receiver.recv().await {
+                let elapsed = start_time.elapsed();
                 let sample = Sample {
                     data: Bytes::from(frame.data),
-                    // 30 fps ⇒ 33 ms between frames
+                    timestamp: elapsed,
                     duration: Duration::from_millis(33),
                     ..Default::default()
                 };
                 if let Err(e) = video_track_clone.write_sample(&sample).await {
                     error!("Error sending video frame: {}", e);
+                } else {
+                    if pts % 150 == 0 { // Log every 5 seconds at 30fps
+                        debug!("Successfully sent frame #{} to WebRTC track", pts);
+                    }
                 }
-                _pts += 1;
+                pts += 1;
             }
+            warn!("Frame sending task ended - no more frames to send");
         });
 
         let streamer = Self {
@@ -242,9 +251,16 @@ impl WebRTCStreamer {
     }
 
     pub async fn send_frame(&self, frame: EncodedFrame) -> Result<()> {
-        self.frame_sender.send(frame).await
-            .map_err(|e| GameShareError::webrtc(format!("Failed to send frame: {}", e)))?;
-        Ok(())
+        match self.frame_sender.send(frame).await {
+            Ok(()) => {
+                // Frame queued successfully
+                Ok(())
+            }
+            Err(e) => {
+                error!("Failed to queue frame for sending: {}", e);
+                Err(GameShareError::webrtc(format!("Failed to send frame: {}", e)).into())
+            }
+        }
     }
 
     pub async fn create_offer(&self) -> Result<String> {
