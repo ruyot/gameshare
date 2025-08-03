@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GameShare Network Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 50px;
+            background: #1a1a1a;
+            color: white;
+        }
+        .success {
+            color: #4CAF50;
+            font-size: 24px;
+        }
+        .info {
+            background: #333;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px auto;
+            max-width: 600px;
+        }
+    </style>
+</head>
+<body>
+    <h1 class="success">✅ Connection Successful!</h1>
+    <p>If you can see this page, the network connection is working.</p>
+    
+    <div class="info">
+        <h2>GameShare is Ready!</h2>
+        <p>You can now access GameShare from this device.</p>
+        <p><a href="index.html" style="color: #4CAF50;">Go to GameShare Home</a></p>
+    </div>
+    
+    <div class="info">
+        <h3>Connection Details:</h3>
+        <p>Time: <span id="time"></span></p>
+        <p>Your IP: <span id="ip">Checking...</span></p>
+    </div>
+    
+    <script>
+        document.getElementById('time').textContent = new Date().toLocaleString();
+        
+        // Try to get client IP (may not work due to CORS)
+        fetch('https://api.ipify.org?format=json')
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('ip').textContent = data.ip;
+            })
+            .catch(() => {
+                document.getElementById('ip').textContent = 'Unable to detect';
+            });
+    </script>
+</body>
+</html>

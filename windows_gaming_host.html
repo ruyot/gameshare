@@ -260,9 +260,6 @@
                 // Connect to signaling
                 await connectSignaling();
                 
-                // Connect to input bridge
-                connectInputBridge();
-                
                 // Update UI
                 startBtn.disabled = true;
                 stopBtn.disabled = false;
@@ -444,34 +441,12 @@
             }
         }
         
-        // WebSocket connection to input bridge
-        let inputBridgeSocket = null;
-        
-        // Connect to input bridge
-        function connectInputBridge() {
-            const bridgeUrl = 'ws://localhost:8765';
-            console.log('Connecting to input bridge at', bridgeUrl);
-            
-            inputBridgeSocket = new WebSocket(bridgeUrl);
-            
-            inputBridgeSocket.onopen = () => {
-                console.log('Connected to input bridge');
-                updateStatus('Connected - Input bridge ready!', 'connected');
-            };
-            
-            inputBridgeSocket.onerror = (error) => {
-                console.error('Input bridge error:', error);
-                console.warn('Make sure to run: python input_bridge.py');
-            };
-            
-            inputBridgeSocket.onclose = () => {
-                console.log('Input bridge disconnected');
-                inputBridgeSocket = null;
-            };
-        }
+        // File-based input bridge (no WebSocket needed)
+        let inputQueue = [];
+        let isProcessingInput = false;
         
         // Handle input messages from client
-        function handleInputMessage(input) {
+        async function handleInputMessage(input) {
             console.log('Received input:', input);
             
             // Show visual indicator
@@ -480,15 +455,47 @@
                 inputIndicator.style.display = 'none';
             }, 100);
             
-            // Send to input bridge if connected
-            if (inputBridgeSocket && inputBridgeSocket.readyState === WebSocket.OPEN) {
-                inputBridgeSocket.send(JSON.stringify(input));
-            } else {
-                console.warn('Input bridge not connected. Run: python input_bridge.py');
-                // Try to reconnect
-                if (!inputBridgeSocket || inputBridgeSocket.readyState === WebSocket.CLOSED) {
-                    connectInputBridge();
+            // Add to queue
+            inputQueue.push(input);
+            
+            // Process queue if not already processing
+            if (!isProcessingInput) {
+                processInputQueue();
+            }
+        }
+        
+        // Process input queue by writing to file
+        async function processInputQueue() {
+            if (inputQueue.length === 0 || isProcessingInput) {
+                return;
+            }
+            
+            isProcessingInput = true;
+            
+            try {
+                // Batch process up to 10 inputs at once
+                const batch = inputQueue.splice(0, 10);
+                const commands = batch.map(cmd => JSON.stringify(cmd)).join('\n') + '\n';
+                
+                // Send to local endpoint that writes to file
+                const response = await fetch('/api/input', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ commands })
+                });
+                
+                if (!response.ok) {
+                    console.warn('Input bridge not available. Make sure to run: python input_bridge_direct.py');
                 }
+            } catch (error) {
+                console.warn('Could not send input. Run the input bridge: python input_bridge_direct.py');
+            }
+            
+            isProcessingInput = false;
+            
+            // Process remaining items
+            if (inputQueue.length > 0) {
+                setTimeout(processInputQueue, 10);
             }
         }
         
