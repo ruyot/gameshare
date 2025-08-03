@@ -83,6 +83,8 @@ impl Encoder {
                     "-maxrate", &format!("{}k", self.config.target_bitrate),
                     "-bufsize", &format!("{}k", self.config.target_bitrate / 2),
                     "-g", &self.config.encoding.keyframe_interval.to_string(),
+                    "-keyint_min", &self.config.encoding.keyframe_interval.to_string(), // Minimum GOP size
+                    "-forced-idr", "1", // Force IDR frames for NVENC
                     "-bf", "0", // No B-frames for low latency
                     "-refs", "1",
                     "-spatial-aq", "1",
@@ -103,6 +105,10 @@ impl Encoder {
                     "-maxrate", &format!("{}k", self.config.target_bitrate),
                     "-bufsize", &format!("{}k", self.config.target_bitrate / 2),
                     "-g", &self.config.encoding.keyframe_interval.to_string(),
+                    "-keyint_min", &self.config.encoding.keyframe_interval.to_string(), // Minimum GOP size
+                    "-x264-params", &format!("keyint={}:min-keyint={}", 
+                        self.config.encoding.keyframe_interval, 
+                        self.config.encoding.keyframe_interval), // Exact GOP control
                     "-bf", "0", // No B-frames
                     "-refs", "1",
                     "-sc_threshold", "0", // Disable scene change detection
@@ -111,9 +117,9 @@ impl Encoder {
             }
         }
 
-        // Force initial keyframe
+        // Force keyframes at regular intervals
         ffmpeg_cmd.args(&[
-            "-force_key_frames", "expr:eq(n,0)",  // Force keyframe on first frame
+            "-force_key_frames", "expr:gte(t,n_forced*1)",  // Force keyframe every 1 second
         ]);
         
         // Output configuration - Output H.264 Annex B format for WebRTC
