@@ -76,6 +76,8 @@ impl Encoder {
                 ffmpeg_cmd.args(&[
                     "-c:v", "h264_nvenc",
                     "-preset", "llhq", // Low latency high quality
+                    "-profile:v", "baseline",
+                    "-level", "3.1",
                     "-rc", "cbr",
                     "-b:v", &format!("{}k", self.config.target_bitrate),
                     "-maxrate", &format!("{}k", self.config.target_bitrate),
@@ -87,6 +89,7 @@ impl Encoder {
                     "-temporal-aq", "1",
                     "-rc-lookahead", "0",
                     "-delay", "0",
+                    "-flags2", "+local_header",  // Include SPS/PPS with keyframes
                 ]);
             },
             EncoderType::X264 => {
@@ -94,6 +97,8 @@ impl Encoder {
                     "-c:v", "libx264",
                     "-preset", &self.config.encoding.preset,
                     "-tune", "zerolatency",
+                    "-profile:v", "baseline",
+                    "-level", "3.1",
                     "-crf", &self.config.encoding.crf.to_string(),
                     "-maxrate", &format!("{}k", self.config.target_bitrate),
                     "-bufsize", &format!("{}k", self.config.target_bitrate / 2),
@@ -101,14 +106,20 @@ impl Encoder {
                     "-bf", "0", // No B-frames
                     "-refs", "1",
                     "-sc_threshold", "0", // Disable scene change detection
+                    "-flags2", "+local_header",  // Include SPS/PPS with keyframes
                 ]);
             }
         }
 
+        // Force initial keyframe
+        ffmpeg_cmd.args(&[
+            "-force_key_frames", "expr:eq(n,0)",  // Force keyframe on first frame
+        ]);
+        
         // Output configuration - Output H.264 Annex B format for WebRTC
         ffmpeg_cmd.args(&[
             "-f", "h264",
-            "-bsf:v", "h264_mp4toannexb",  // Ensure proper NAL unit formatting
+            "-bsf:v", "h264_mp4toannexb,dump_extra",  // Include SPS/PPS
             "-"
         ]);
 
@@ -201,15 +212,26 @@ impl Encoder {
                         
                         let is_keyframe = Self::is_keyframe(&nal_data);
                         
-                        // Log NAL unit details every second
-                        if pts % 30 == 0 {
-                            let nal_type = if nal_data.len() > 4 {
-                                nal_data[3] & 0x1F
-                            } else {
-                                0
+                        // Log NAL unit details 
+                        let nal_type = if nal_data.len() > 4 {
+                            nal_data[3] & 0x1F
+                        } else if nal_data.len() > 3 {
+                            nal_data[2] & 0x1F
+                        } else {
+                            0
+                        };
+                        
+                        // Log important NAL units
+                        if pts < 10 || pts % 30 == 0 || nal_type == 5 || nal_type == 7 || nal_type == 8 {
+                            let nal_type_name = match nal_type {
+                                1 => "non-IDR slice",
+                                5 => "IDR slice (keyframe)",
+                                7 => "SPS",
+                                8 => "PPS",
+                                _ => "other"
                             };
-                            debug!("Sending NAL unit #{}: type={}, size={}, keyframe={}", 
-                                   pts, nal_type, nal_data.len(), is_keyframe);
+                            debug!("Sending NAL unit #{}: type={} ({}), size={}, keyframe={}", 
+                                   pts, nal_type, nal_type_name, nal_data.len(), is_keyframe);
                         }
                         
                         let encoded_frame = EncodedFrame {
