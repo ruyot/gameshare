@@ -1,0 +1,2 @@
+# Web server requirements (minimal for Fly.io deployment)
+# No need for pywin32 or websockets on the server
