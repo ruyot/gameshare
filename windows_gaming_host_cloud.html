@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GameShare - Windows Gaming Host (Cloud)</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            font-weight: bold;
+            text-align: center;
+        }
+        .status.connected { background: rgba(76, 175, 80, 0.3); border: 2px solid #4CAF50; }
+        .status.disconnected { background: rgba(244, 67, 54, 0.3); border: 2px solid #F44336; }
+        .status.connecting { background: rgba(255, 193, 7, 0.3); border: 2px solid #FFC107; }
+        .form-group {
+            margin: 20px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        button {
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin: 10px 0;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .video-container {
+            margin: 20px 0;
+            text-align: center;
+        }
+        #videoElement {
+            max-width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        .stats {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .info {
+            background: rgba(0, 150, 136, 0.3);
+            border: 2px solid #009688;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 GameShare Host (Cloud)</h1>
+        
+        <div class="info">
+            <strong>☁️ Cloud Signaling</strong><br>
+            This version uses a cloud-based signaling relay for easy connection.
+            Share your Session ID with the client to connect.
+        </div>
+
+        <div class="form-group">
+            <label for="sessionId">Session ID:</label>
+            <input type="text" id="sessionId" value="game-session-" placeholder="Enter unique session ID">
+        </div>
+
+        <button id="startBtn" onclick="startGameSharing()">🎮 Start Game Sharing</button>
+        <button id="stopBtn" onclick="stopGameSharing()" disabled>⏹️ Stop Sharing</button>
+
+        <div id="status" class="status disconnected">Disconnected</div>
+
+        <div class="video-container">
+            <video id="videoElement" autoplay muted></video>
+        </div>
+
+        <div class="stats" id="stats">
+            <div>Connection Status: <span id="connectionStatus">Disconnected</span></div>
+            <div>Video Resolution: <span id="videoResolution">0x0</span></div>
+            <div>Session ID: <span id="displaySessionId">-</span></div>
+        </div>
+    </div>
+
+    <script>
+        let peerConnection;
+        let localStream;
+        let signalingSocket;
+        let sessionId;
+        let isHost = true;
+
+        // Generate random session ID
+        document.getElementById('sessionId').value = 'game-session-' + Math.random().toString(36).substr(2, 9);
+
+        const configuration = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun.stunprotocol.org:3478' }
+            ]
+        };
+
+        // Using a public WebSocket relay service for signaling
+        const SIGNALING_SERVER = 'wss://socketsbay.com/wss/v2/1/demo/';
+
+        function updateStatus(message, className) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${className}`;
+        }
+
+        function updateStats() {
+            const video = document.getElementById('videoElement');
+            
+            if (video.videoWidth > 0 && video.videoHeight > 0) {
+                document.getElementById('videoResolution').textContent = `${video.videoWidth}x${video.videoHeight}`;
+            }
+            
+            if (peerConnection) {
+                const state = peerConnection.connectionState;
+                document.getElementById('connectionStatus').textContent = state;
+            }
+
+            document.getElementById('displaySessionId').textContent = sessionId || '-';
+        }
+
+        async function startGameSharing() {
+            try {
+                sessionId = document.getElementById('sessionId').value;
+                
+                updateStatus('Connecting to cloud signaling...', 'connecting');
+
+                // Connect to cloud signaling relay
+                signalingSocket = new WebSocket(SIGNALING_SERVER);
+                
+                signalingSocket.onopen = () => {
+                    updateStatus('Connected to cloud signaling', 'connected');
+                    
+                    // Join session as host
+                    signalingSocket.send(JSON.stringify({
+                        type: 'join',
+                        sessionId: sessionId,
+                        clientType: 'host',
+                        room: sessionId
+                    }));
+
+                    // Start screen capture immediately
+                    startScreenCapture();
+                };
+
+                signalingSocket.onmessage = async (event) => {
+                    const message = JSON.parse(event.data);
+                    console.log('Received message:', message);
+
+                    // Filter messages by session ID
+                    if (message.room !== sessionId && message.sessionId !== sessionId) {
+                        return;
+                    }
+
+                    switch (message.type) {
+                        case 'offer':
+                            await handleOffer(message);
+                            break;
+                        case 'ice-candidate':
+                            await handleIceCandidate(message);
+                            break;
+                    }
+                };
+
+                signalingSocket.onerror = (error) => {
+                    console.error('Signaling error:', error);
+                    updateStatus('Signaling connection error', 'disconnected');
+                };
+
+                signalingSocket.onclose = () => {
+                    updateStatus('Signaling connection closed', 'disconnected');
+                };
+
+                document.getElementById('startBtn').disabled = true;
+
+            } catch (error) {
+                console.error('Error starting game sharing:', error);
+                updateStatus('Error: ' + error.message, 'disconnected');
+            }
+        }
+
+        async function startScreenCapture() {
+            try {
+                // Get screen capture
+                localStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: {
+                        cursor: 'always',
+                        displaySurface: 'window'
+                    },
+                    audio: false
+                });
+
+                const videoElement = document.getElementById('videoElement');
+                videoElement.srcObject = localStream;
+
+                updateStatus('Screen captured, waiting for client...', 'connecting');
+
+                // Create peer connection
+                peerConnection = new RTCPeerConnection(configuration);
+
+                // Add local stream
+                localStream.getTracks().forEach(track => {
+                    peerConnection.addTrack(track, localStream);
+                });
+
+                // Handle ICE candidates
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate && signalingSocket.readyState === WebSocket.OPEN) {
+                        signalingSocket.send(JSON.stringify({
+                            type: 'ice-candidate',
+                            candidate: event.candidate,
+                            target: 'client',
+                            room: sessionId,
+                            sessionId: sessionId
+                        }));
+                    }
+                };
+
+                // Handle connection state changes
+                peerConnection.onconnectionstatechange = () => {
+                    const state = peerConnection.connectionState;
+                    console.log('Connection state:', state);
+                    
+                    if (state === 'connected') {
+                        updateStatus('Client connected! Game sharing active', 'connected');
+                        document.getElementById('stopBtn').disabled = false;
+                    } else if (state === 'disconnected' || state === 'failed') {
+                        updateStatus('Client disconnected', 'disconnected');
+                    }
+                };
+
+                // Start stats monitoring
+                setInterval(updateStats, 1000);
+
+            } catch (error) {
+                console.error('Error starting screen capture:', error);
+                updateStatus('Error: ' + error.message, 'disconnected');
+                document.getElementById('startBtn').disabled = false;
+            }
+        }
+
+        async function handleOffer(message) {
+            try {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(message.offer));
+                
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+
+                signalingSocket.send(JSON.stringify({
+                    type: 'answer',
+                    answer: answer,
+                    room: sessionId,
+                    sessionId: sessionId
+                }));
+
+            } catch (error) {
+                console.error('Error handling offer:', error);
+            }
+        }
+
+        async function handleIceCandidate(message) {
+            try {
+                if (message.candidate) {
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(message.candidate));
+                }
+            } catch (error) {
+                console.error('Error adding ICE candidate:', error);
+            }
+        }
+
+        function stopGameSharing() {
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+            
+            if (peerConnection) {
+                peerConnection.close();
+                peerConnection = null;
+            }
+            
+            if (signalingSocket) {
+                signalingSocket.close();
+                signalingSocket = null;
+            }
+
+            const videoElement = document.getElementById('videoElement');
+            videoElement.srcObject = null;
+
+            updateStatus('Game sharing stopped', 'disconnected');
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+        }
+    </script>
+</body>
+</html>

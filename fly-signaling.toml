@@ -1,0 +1,20 @@
+# fly.toml app configuration for signaling server
+app = "gameshare-signaling"
+primary_region = "dfw"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+
+[[services]]
+  internal_port = 3000
+  protocol = "tcp"
+  
+  [[services.ports]]
+    handlers = ["http", "tls"]
+    port = 443
+
+[env]
+  PORT = "3000"

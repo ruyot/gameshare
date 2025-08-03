@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GameShare - Gaming Client (Cloud)</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            font-weight: bold;
+            text-align: center;
+        }
+        .status.connected { background: rgba(76, 175, 80, 0.3); border: 2px solid #4CAF50; }
+        .status.disconnected { background: rgba(244, 67, 54, 0.3); border: 2px solid #F44336; }
+        .status.connecting { background: rgba(255, 193, 7, 0.3); border: 2px solid #FFC107; }
+        .form-group {
+            margin: 20px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        button {
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin: 10px 0;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .video-container {
+            margin: 20px 0;
+            text-align: center;
+            position: relative;
+        }
+        #videoElement {
+            max-width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            cursor: crosshair;
+        }
+        .fullscreen-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .stats {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .info {
+            background: rgba(0, 150, 136, 0.3);
+            border: 2px solid #009688;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+        .input-info {
+            background: rgba(156, 39, 176, 0.3);
+            border: 2px solid #9C27B0;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 GameShare Client (Cloud)</h1>
+        
+        <div class="info">
+            <strong>☁️ Cloud Signaling</strong><br>
+            Enter the Session ID provided by the host to connect.
+        </div>
+
+        <div class="form-group">
+            <label for="sessionId">Session ID:</label>
+            <input type="text" id="sessionId" placeholder="Enter host's session ID (e.g., game-session-xxxxx)">
+        </div>
+
+        <div class="form-group">
+            <label for="hostIp">Host IP Address:</label>
+            <input type="text" id="hostIp" value="10.0.0.105" placeholder="Enter host's IP address">
+        </div>
+
+        <button id="connectBtn" onclick="connectToHost()">🔗 Connect to Host</button>
+        <button id="disconnectBtn" onclick="disconnectFromHost()" disabled>❌ Disconnect</button>
+
+        <div id="status" class="status disconnected">Disconnected</div>
+
+        <div class="video-container">
+            <video id="videoElement" autoplay></video>
+            <button class="fullscreen-btn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
+        </div>
+
+        <div class="input-info">
+            <strong>🎮 Input Controls:</strong><br>
+            • Click on the video to send mouse clicks<br>
+            • Use keyboard to send keystrokes<br>
+            • Fullscreen mode available
+        </div>
+
+        <div class="stats" id="stats">
+            <div>Connection Status: <span id="connectionStatus">Disconnected</span></div>
+            <div>Video Resolution: <span id="videoResolution">0x0</span></div>
+            <div>Session ID: <span id="displaySessionId">-</span></div>
+        </div>
+    </div>
+
+    <script>
+        let peerConnection;
+        let signalingSocket;
+        let sessionId;
+        let hostIp;
+        let isHost = false;
+        let inputEnabled = false;
+
+        const configuration = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun.stunprotocol.org:3478' }
+            ]
+        };
+
+        // Using a public WebSocket relay service for signaling
+        const SIGNALING_SERVER = 'wss://socketsbay.com/wss/v2/1/demo/';
+
+        function updateStatus(message, className) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${className}`;
+        }
+
+        function updateStats() {
+            const video = document.getElementById('videoElement');
+            
+            if (video.videoWidth > 0 && video.videoHeight > 0) {
+                document.getElementById('videoResolution').textContent = `${video.videoWidth}x${video.videoHeight}`;
+            }
+            
+            if (peerConnection) {
+                const state = peerConnection.connectionState;
+                document.getElementById('connectionStatus').textContent = state;
+            }
+
+            document.getElementById('displaySessionId').textContent = sessionId || '-';
+        }
+
+        async function connectToHost() {
+            try {
+                sessionId = document.getElementById('sessionId').value;
+                hostIp = document.getElementById('hostIp').value;
+
+                if (!sessionId) {
+                    alert('Please enter the session ID provided by the host');
+                    return;
+                }
+
+                updateStatus('Connecting to cloud signaling...', 'connecting');
+
+                // Connect to cloud signaling relay
+                signalingSocket = new WebSocket(SIGNALING_SERVER);
+                
+                signalingSocket.onopen = () => {
+                    updateStatus('Connected to cloud signaling', 'connected');
+                    
+                    // Join session as client
+                    signalingSocket.send(JSON.stringify({
+                        type: 'join',
+                        sessionId: sessionId,
+                        clientType: 'client',
+                        room: sessionId
+                    }));
+
+                    // Create peer connection immediately
+                    createPeerConnection();
+                };
+
+                signalingSocket.onmessage = async (event) => {
+                    const message = JSON.parse(event.data);
+                    console.log('Received message:', message);
+
+                    // Filter messages by session ID
+                    if (message.room !== sessionId && message.sessionId !== sessionId) {
+                        return;
+                    }
+
+                    switch (message.type) {
+                        case 'answer':
+                            await handleAnswer(message);
+                            break;
+                        case 'ice-candidate':
+                            await handleIceCandidate(message);
+                            break;
+                    }
+                };
+
+                signalingSocket.onerror = (error) => {
+                    console.error('Signaling error:', error);
+                    updateStatus('Signaling connection error', 'disconnected');
+                };
+
+                signalingSocket.onclose = () => {
+                    updateStatus('Signaling connection closed', 'disconnected');
+                };
+
+                document.getElementById('connectBtn').disabled = true;
+
+            } catch (error) {
+                console.error('Error connecting to host:', error);
+                updateStatus('Error: ' + error.message, 'disconnected');
+            }
+        }
+
+        async function createPeerConnection() {
+            try {
+                peerConnection = new RTCPeerConnection(configuration);
+
+                // Handle incoming video stream
+                peerConnection.ontrack = (event) => {
+                    const videoElement = document.getElementById('videoElement');
+                    videoElement.srcObject = event.streams[0];
+                    updateStatus('Receiving video stream...', 'connecting');
+                };
+
+                // Handle ICE candidates
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate && signalingSocket.readyState === WebSocket.OPEN) {
+                        signalingSocket.send(JSON.stringify({
+                            type: 'ice-candidate',
+                            candidate: event.candidate,
+                            target: 'host',
+                            room: sessionId,
+                            sessionId: sessionId
+                        }));
+                    }
+                };
+
+                // Handle connection state changes
+                peerConnection.onconnectionstatechange = () => {
+                    const state = peerConnection.connectionState;
+                    console.log('Connection state:', state);
+                    
+                    if (state === 'connected') {
+                        updateStatus('Connected to host! Game streaming active', 'connected');
+                        document.getElementById('disconnectBtn').disabled = false;
+                        enableInput();
+                    } else if (state === 'disconnected' || state === 'failed') {
+                        updateStatus('Disconnected from host', 'disconnected');
+                        document.getElementById('connectBtn').disabled = false;
+                        document.getElementById('disconnectBtn').disabled = true;
+                        disableInput();
+                    }
+                };
+
+                // Create and send offer
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+
+                signalingSocket.send(JSON.stringify({
+                    type: 'offer',
+                    offer: offer,
+                    room: sessionId,
+                    sessionId: sessionId
+                }));
+
+                // Start stats monitoring
+                setInterval(updateStats, 1000);
+
+            } catch (error) {
+                console.error('Error creating peer connection:', error);
+                updateStatus('Error: ' + error.message, 'disconnected');
+                document.getElementById('connectBtn').disabled = false;
+            }
+        }
+
+        async function handleAnswer(message) {
+            try {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(message.answer));
+            } catch (error) {
+                console.error('Error handling answer:', error);
+            }
+        }
+
+        async function handleIceCandidate(message) {
+            try {
+                if (message.candidate) {
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(message.candidate));
+                }
+            } catch (error) {
+                console.error('Error adding ICE candidate:', error);
+            }
+        }
+
+        function disconnectFromHost() {
+            if (peerConnection) {
+                peerConnection.close();
+                peerConnection = null;
+            }
+            
+            if (signalingSocket) {
+                signalingSocket.close();
+                signalingSocket = null;
+            }
+
+            const videoElement = document.getElementById('videoElement');
+            videoElement.srcObject = null;
+
+            updateStatus('Disconnected from host', 'disconnected');
+            document.getElementById('connectBtn').disabled = false;
+            document.getElementById('disconnectBtn').disabled = true;
+            disableInput();
+        }
+
+        function enableInput() {
+            inputEnabled = true;
+            const video = document.getElementById('videoElement');
+            video.style.cursor = 'crosshair';
+        }
+
+        function disableInput() {
+            inputEnabled = false;
+            const video = document.getElementById('videoElement');
+            video.style.cursor = 'default';
+        }
+
+        function toggleFullscreen() {
+            const video = document.getElementById('videoElement');
+            if (video.requestFullscreen) {
+                video.requestFullscreen();
+            } else if (video.webkitRequestFullscreen) {
+                video.webkitRequestFullscreen();
+            } else if (video.msRequestFullscreen) {
+                video.msRequestFullscreen();
+            }
+        }
+
+        // Handle mouse input
+        document.getElementById('videoElement').addEventListener('click', function(e) {
+            if (!inputEnabled || !hostIp) return;
+            
+            const rect = e.target.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Normalize coordinates (0-1)
+            const normalizedX = x / rect.width;
+            const normalizedY = y / rect.height;
+            
+            // Send input to host
+            sendInput({
+                type: 'click',
+                x: normalizedX,
+                y: normalizedY,
+                button: e.button
+            });
+        });
+
+        // Handle keyboard input
+        document.addEventListener('keydown', function(e) {
+            if (!inputEnabled || !hostIp) return;
+            
+            sendInput({
+                type: 'keydown',
+                key: e.key,
+                keyCode: e.keyCode,
+                ctrlKey: e.ctrlKey,
+                altKey: e.altKey,
+                shiftKey: e.shiftKey
+            });
+        });
+
+        document.addEventListener('keyup', function(e) {
+            if (!inputEnabled || !hostIp) return;
+            
+            sendInput({
+                type: 'keyup',
+                key: e.key,
+                keyCode: e.keyCode,
+                ctrlKey: e.ctrlKey,
+                altKey: e.altKey,
+                shiftKey: e.shiftKey
+            });
+        });
+
+        function sendInput(inputData) {
+            // Send input to the host via HTTP POST
+            fetch(`http://${hostIp}:8080/api/input`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    commands: JSON.stringify(inputData) + '\n'
+                })
+            }).catch(error => {
+                console.error('Error sending input:', error);
+            });
+        }
+    </script>
+</body>
+</html>

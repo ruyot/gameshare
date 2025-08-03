@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GameShare Player - Fly.io Version</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #1a1a1a;
+            color: white;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        #container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #remoteVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: #000;
+            cursor: none;
+        }
+        #remoteVideo.show-cursor {
+            cursor: auto;
+        }
+        #status {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px 30px;
+            border-radius: 5px;
+            text-align: center;
+            z-index: 10;
+            transition: opacity 0.3s;
+        }
+        #connectionForm {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            min-width: 300px;
+        }
+        #connectionForm h2 {
+            margin-bottom: 20px;
+            color: #4CAF50;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #444;
+            background: #222;
+            color: white;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+            transition: background 0.3s;
+        }
+        button:hover:not(:disabled) {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+            gap: 10px;
+            z-index: 10;
+        }
+        .control-button {
+            background: rgba(76, 175, 80, 0.8);
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .control-button:hover {
+            background: rgba(76, 175, 80, 1);
+        }
+        #instructions {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 5px;
+            text-align: center;
+            max-width: 500px;
+            display: none;
+        }
+        .hidden {
+            display: none !important;
+        }
+        .loading {
+            color: #ffeb3b;
+        }
+        .connected {
+            color: #4CAF50;
+        }
+        .error {
+            color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <video id="remoteVideo" autoplay playsinline></video>
+        
+        <div id="connectionForm">
+            <h2>🎮 GameShare Player</h2>
+            <input type="text" id="signalingUrl" placeholder="Signaling Server URL" value="wss://ws.achex.ca">
+            <input type="text" id="sessionId" placeholder="Session ID" value="default-session">
+            <button id="connectBtn" onclick="connect()">Connect</button>
+            <p style="margin-top: 20px; font-size: 14px; color: #888;">
+                Ask the host for their signaling server URL and session ID
+            </p>
+        </div>
+        
+        <div id="status" class="hidden">Connecting...</div>
+        
+        <div id="instructions" class="hidden">
+            <h3>🎮 GameShare Player</h3>
+            <p>Waiting for host to start sharing...</p>
+            <p>Once connected, click on the video to capture mouse and keyboard.</p>
+            <p>Press ESC to release control.</p>
+        </div>
+        
+        <div id="controls">
+            <div class="control-button" onclick="toggleFullscreen()">Fullscreen</div>
+        </div>
+    </div>
+
+    <script>
+        // WebRTC variables
+        let peerConnection = null;
+        let signalingSocket = null;
+        let dataChannel = null;
+        let isControlEnabled = false;
+        let sessionId = '';
+        
+        // DOM elements
+        const remoteVideo = document.getElementById('remoteVideo');
+        const status = document.getElementById('status');
+        const instructions = document.getElementById('instructions');
+        const controls = document.getElementById('controls');
+        const connectionForm = document.getElementById('connectionForm');
+        const connectBtn = document.getElementById('connectBtn');
+        const signalingUrlInput = document.getElementById('signalingUrl');
+        const sessionIdInput = document.getElementById('sessionId');
+        
+        const ICE_SERVERS = [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+        ];
+        
+        function connect() {
+            const signalingUrl = signalingUrlInput.value.trim();
+            sessionId = sessionIdInput.value.trim();
+            
+            if (!signalingUrl || !sessionId) {
+                alert('Please enter both signaling server URL and session ID');
+                return;
+            }
+            
+            connectBtn.disabled = true;
+            connectionForm.classList.add('hidden');
+            status.classList.remove('hidden');
+            status.textContent = '🔄 Connecting to session...';
+            status.className = 'loading';
+            
+            connectToSession(signalingUrl, sessionId);
+        }
+        
+        async function connectToSession(signalingUrl, sessionId) {
+            try {
+                // Connect to signaling server
+                // For achex.ca, we need to connect to a specific channel
+                const wsUrl = signalingUrl.includes('achex.ca') 
+                    ? `${signalingUrl}/gameshare-${sessionId}` 
+                    : `${signalingUrl}?session=${sessionId}`;
+                console.log('Connecting to:', wsUrl);
+                
+                signalingSocket = new WebSocket(wsUrl);
+                
+                signalingSocket.onopen = () => {
+                    console.log('Connected to signaling server');
+                    // For achex.ca, we need to send a special auth message first
+                    if (signalingUrl.includes('achex.ca')) {
+                        signalingSocket.send('{"setID":"gameshare-client","passwd":"public"}');
+                    }
+                    signalingSocket.send(JSON.stringify({
+                        type: 'join',
+                        payload: { role: 'client' },
+                        sessionId: sessionId,
+                        room: sessionId,
+                        to: 'gameshare-*'  // Broadcast to all gameshare participants
+                    }));
+                    status.textContent = '✓ Connected - Waiting for host';
+                    status.className = 'connected';
+                    
+                    instructions.classList.remove('hidden');
+                    
+                    // Create peer connection and send offer
+                    createPeerConnection();
+                };
+                
+                signalingSocket.onerror = (error) => {
+                    console.error('Signaling error:', error);
+                    status.textContent = '✗ Connection failed';
+                    status.className = 'error';
+                    reconnect();
+                };
+                
+                signalingSocket.onmessage = async (event) => {
+                    const message = JSON.parse(event.data);
+                    console.log('Received signaling message:', message);
+                    
+                    // Filter messages by session ID
+                    if (message.room !== sessionId && message.sessionId !== sessionId) {
+                        return;
+                    }
+                    
+                    if (message.type === 'answer') {
+                        await handleAnswer(message.payload);
+                    } else if (message.type === 'ice-candidate') {
+                        await handleIceCandidate(message.payload);
+                    } else if (message.type === 'participantJoined') {
+                        console.log('Participant joined:', message.sessionId);
+                        if (!peerConnection) {
+                            createPeerConnection();
+                        }
+                    }
+                };
+                
+                signalingSocket.onclose = () => {
+                    console.log('Disconnected from signaling server');
+                    status.textContent = '✗ Disconnected';
+                    status.className = 'error';
+                    reconnect();
+                };
+                
+            } catch (error) {
+                console.error('Connection error:', error);
+                status.textContent = '✗ Failed to connect';
+                status.className = 'error';
+                reconnect();
+            }
+        }
+        
+        function reconnect() {
+            setTimeout(() => {
+                connectionForm.classList.remove('hidden');
+                status.classList.add('hidden');
+                instructions.classList.add('hidden');
+                connectBtn.disabled = false;
+            }, 3000);
+        }
+        
+        async function createPeerConnection() {
+            console.log('Creating peer connection');
+            
+            peerConnection = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+            
+            // Create data channel for input
+            dataChannel = peerConnection.createDataChannel('input', {
+                ordered: false,
+                maxRetransmits: 0
+            });
+            
+            dataChannel.onopen = () => {
+                console.log('Data channel opened');
+                enableControls();
+            };
+            
+            dataChannel.onclose = () => {
+                console.log('Data channel closed');
+                disableControls();
+            };
+            
+            // Handle incoming stream
+            peerConnection.ontrack = (event) => {
+                console.log('Received remote track');
+                remoteVideo.srcObject = event.streams[0];
+                status.classList.add('hidden');
+                instructions.classList.add('hidden');
+                controls.style.display = 'flex';
+            };
+            
+            // Handle ICE candidates
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    signalingSocket.send(JSON.stringify({
+                        type: 'ice-candidate',
+                        payload: event.candidate,
+                        sessionId: sessionId,
+                        room: sessionId,
+                        to: 'gameshare-*'
+                    }));
+                }
+            };
+            
+            // Create and send offer
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+            
+            signalingSocket.send(JSON.stringify({
+                type: 'offer',
+                payload: offer,
+                sessionId: sessionId,
+                room: sessionId,
+                to: 'gameshare-*'
+            }));
+            
+            console.log('Sent offer');
+        }
+        
+        async function handleAnswer(answer) {
+            console.log('Received answer');
+            try {
+                await peerConnection.setRemoteDescription(answer);
+            } catch (error) {
+                console.error('Error setting remote description:', error);
+            }
+        }
+        
+        async function handleIceCandidate(candidate) {
+            try {
+                await peerConnection.addIceCandidate(candidate);
+                console.log('Added ICE candidate');
+            } catch (error) {
+                console.error('Error adding ICE candidate:', error);
+            }
+        }
+        
+        function enableControls() {
+            // Click to capture mouse
+            remoteVideo.addEventListener('click', capturePointer);
+            
+            // Mouse events
+            remoteVideo.addEventListener('mousemove', handleMouseMove);
+            remoteVideo.addEventListener('mousedown', handleMouseDown);
+            remoteVideo.addEventListener('mouseup', handleMouseUp);
+            remoteVideo.addEventListener('wheel', handleWheel);
+            remoteVideo.addEventListener('contextmenu', (e) => e.preventDefault());
+            
+            // Keyboard events
+            document.addEventListener('keydown', handleKeyDown);
+            document.addEventListener('keyup', handleKeyUp);
+        }
+        
+        function disableControls() {
+            remoteVideo.removeEventListener('click', capturePointer);
+            remoteVideo.removeEventListener('mousemove', handleMouseMove);
+            remoteVideo.removeEventListener('mousedown', handleMouseDown);
+            remoteVideo.removeEventListener('mouseup', handleMouseUp);
+            remoteVideo.removeEventListener('wheel', handleWheel);
+            document.removeEventListener('keydown', handleKeyDown);
+            document.removeEventListener('keyup', handleKeyUp);
+        }
+        
+        async function capturePointer() {
+            if (!isControlEnabled) {
+                try {
+                    await remoteVideo.requestPointerLock();
+                } catch (error) {
+                    console.error('Failed to capture pointer:', error);
+                }
+            }
+        }
+        
+        document.addEventListener('pointerlockchange', () => {
+            isControlEnabled = document.pointerLockElement === remoteVideo;
+            remoteVideo.classList.toggle('show-cursor', !isControlEnabled);
+            
+            if (isControlEnabled) {
+                status.textContent = '🎮 Control enabled - Press ESC to release';
+                status.classList.remove('hidden');
+                setTimeout(() => status.classList.add('hidden'), 3000);
+            }
+        });
+        
+        function sendInput(data) {
+            if (dataChannel && dataChannel.readyState === 'open') {
+                dataChannel.send(JSON.stringify(data));
+            }
+        }
+        
+        function handleMouseMove(event) {
+            if (!isControlEnabled) return;
+            
+            const rect = remoteVideo.getBoundingClientRect();
+            const videoWidth = remoteVideo.videoWidth;
+            const videoHeight = remoteVideo.videoHeight;
+            
+            if (videoWidth && videoHeight) {
+                const scaleX = videoWidth / rect.width;
+                const scaleY = videoHeight / rect.height;
+                
+                sendInput({
+                    type: 'mousemove',
+                    movementX: event.movementX * scaleX,
+                    movementY: event.movementY * scaleY
+                });
+            }
+        }
+        
+        function handleMouseDown(event) {
+            if (!isControlEnabled) return;
+            sendInput({
+                type: 'mousedown',
+                button: event.button
+            });
+        }
+        
+        function handleMouseUp(event) {
+            if (!isControlEnabled) return;
+            sendInput({
+                type: 'mouseup',
+                button: event.button
+            });
+        }
+        
+        function handleWheel(event) {
+            if (!isControlEnabled) return;
+            event.preventDefault();
+            sendInput({
+                type: 'wheel',
+                deltaY: event.deltaY
+            });
+        }
+        
+        function handleKeyDown(event) {
+            if (!isControlEnabled) return;
+            if (event.key === 'Escape') return; // Let ESC work normally
+            
+            event.preventDefault();
+            sendInput({
+                type: 'keydown',
+                key: event.key,
+                code: event.code
+            });
+        }
+        
+        function handleKeyUp(event) {
+            if (!isControlEnabled) return;
+            if (event.key === 'Escape') return;
+            
+            event.preventDefault();
+            sendInput({
+                type: 'keyup',
+                key: event.key,
+                code: event.code
+            });
+        }
+        
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                container.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+    </script>
+</body>
+</html>

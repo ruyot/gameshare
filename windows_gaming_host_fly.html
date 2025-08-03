@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GameShare Host - Fly.io Version</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f0f2f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .info-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+        .info-card h3 {
+            margin: 0 0 10px 0;
+            color: #495057;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .info-card p {
+            margin: 0;
+            font-size: 16px;
+            color: #212529;
+        }
+        #inputIndicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            display: none;
+            z-index: 1000;
+        }
+        .controls {
+            text-align: center;
+            margin-top: 20px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: background 0.3s;
+        }
+        button:hover:not(:disabled) {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .stop {
+            background: #dc3545;
+        }
+        .stop:hover:not(:disabled) {
+            background: #c82333;
+        }
+        #status {
+            text-align: center;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status-ready {
+            background: #cfe2ff;
+            color: #084298;
+            border: 1px solid #b6d4fe;
+        }
+        .status-connected {
+            background: #d1e7dd;
+            color: #0f5132;
+            border: 1px solid #badbcc;
+        }
+        .status-error {
+            background: #f8d7da;
+            color: #842029;
+            border: 1px solid #f5c2c7;
+        }
+        .input-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #495057;
+            font-weight: bold;
+        }
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #ffeeba;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 GameShare Host - Fly.io Version</h1>
+        
+        <div class="warning">
+            ⚠️ This version requires the local signaling server to be running on your Windows machine!
+        </div>
+        
+        <div id="status" class="status-ready">Ready to start game sharing</div>
+        
+        <div class="input-section">
+            <label for="signalingUrl">Signaling Server URL:</label>
+                            <input type="text" id="signalingUrl" value="wss://ws.achex.ca" placeholder="wss://ws.achex.ca">
+            <small style="color: #6c757d;">If hosting from a different machine, replace localhost with that machine's IP</small>
+        </div>
+        
+        <div id="sessionInfo">
+            <h2>Session ID</h2>
+            <p style="font-size: 24px; font-weight: bold; color: #007bff; text-align: center;">default-session</p>
+            <p style="text-align: center; color: #6c757d;">Share this with players to connect</p>
+        </div>
+        
+        <div class="info-grid">
+            <div class="info-card">
+                <h3>Connection</h3>
+                <p id="connectionState">Not connected</p>
+            </div>
+            <div class="info-card">
+                <h3>Players</h3>
+                <p id="playerCount">0 connected</p>
+            </div>
+            <div class="info-card">
+                <h3>Stream Status</h3>
+                <p id="streamStatus">Not streaming</p>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button id="startBtn" onclick="startSharing()">Start Game Sharing</button>
+            <button id="stopBtn" class="stop" onclick="stopSharing()" disabled>Stop Sharing</button>
+        </div>
+        
+        <div id="inputIndicator">Input Received!</div>
+    </div>
+
+    <script>
+        // Configuration
+        const SESSION_ID = 'default-session';
+        const ICE_SERVERS = [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+        ];
+        
+        // WebRTC variables
+        let localStream = null;
+        let peerConnections = new Map();
+        let signalingSocket = null;
+        let connectedPeers = 0;
+        let isSharing = false;
+        
+        // DOM elements
+        const status = document.getElementById('status');
+        const connectionState = document.getElementById('connectionState');
+        const playerCount = document.getElementById('playerCount');
+        const streamStatus = document.getElementById('streamStatus');
+        const stopBtn = document.getElementById('stopBtn');
+        const startBtn = document.getElementById('startBtn');
+        const inputIndicator = document.getElementById('inputIndicator');
+        const signalingUrlInput = document.getElementById('signalingUrl');
+        
+        // File-based input bridge (no WebSocket needed)
+        let inputQueue = [];
+        let isProcessingInput = false;
+        
+        // Handle input messages from client
+        async function handleInputMessage(input) {
+            console.log('Received input:', input);
+            
+            // Show visual indicator
+            inputIndicator.style.display = 'block';
+            setTimeout(() => {
+                inputIndicator.style.display = 'none';
+            }, 100);
+            
+            // Add to queue
+            inputQueue.push(input);
+            
+            // Process queue if not already processing
+            if (!isProcessingInput) {
+                processInputQueue();
+            }
+        }
+        
+        // Process input queue by writing to file
+        async function processInputQueue() {
+            if (inputQueue.length === 0 || isProcessingInput) {
+                return;
+            }
+            
+            isProcessingInput = true;
+            
+            try {
+                // Batch process up to 10 inputs at once
+                const batch = inputQueue.splice(0, 10);
+                const commands = batch.map(cmd => JSON.stringify(cmd)).join('\n') + '\n';
+                
+                // Send to local endpoint that writes to file
+                const response = await fetch('/api/input', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ commands })
+                });
+                
+                if (!response.ok) {
+                    console.warn('Input bridge not available. Make sure to run: python input_bridge_direct.py');
+                }
+            } catch (error) {
+                console.warn('Could not send input. Run the input bridge: python input_bridge_direct.py');
+            }
+            
+            isProcessingInput = false;
+            
+            // Process remaining items
+            if (inputQueue.length > 0) {
+                setTimeout(processInputQueue, 10);
+            }
+        }
+        
+        async function connectSignaling() {
+            return new Promise((resolve, reject) => {
+                const signalingUrl = signalingUrlInput.value.trim();
+                // For achex.ca, we need to connect to a specific channel
+                const wsUrl = signalingUrl.includes('achex.ca') 
+                    ? `${signalingUrl}/gameshare-${SESSION_ID}` 
+                    : `${signalingUrl}?session=${SESSION_ID}`;
+                console.log('Connecting to signaling server:', wsUrl);
+                
+                signalingSocket = new WebSocket(wsUrl);
+                
+                signalingSocket.onopen = () => {
+                    console.log('Connected to signaling server');
+                    // For achex.ca, we need to send a special auth message first
+                    if (signalingUrl.includes('achex.ca')) {
+                        signalingSocket.send('{"setID":"gameshare-host","passwd":"public"}');
+                    }
+                    signalingSocket.send(JSON.stringify({
+                        type: 'join',
+                        payload: { role: 'host' },
+                        sessionId: SESSION_ID,
+                        room: SESSION_ID,
+                        to: 'gameshare-*'  // Broadcast to all gameshare clients
+                    }));
+                    connectionState.textContent = 'Connected';
+                    status.className = 'status-connected';
+                    status.textContent = '✓ Connected to signaling server';
+                    resolve();
+                };
+                
+                signalingSocket.onerror = (error) => {
+                    console.error('Signaling error:', error);
+                    connectionState.textContent = 'Error';
+                    status.className = 'status-error';
+                    status.textContent = '✗ Failed to connect to signaling server';
+                    reject(error);
+                };
+                
+                signalingSocket.onmessage = async (event) => {
+                    const message = JSON.parse(event.data);
+                    console.log('Received signaling message:', message);
+                    
+                    // Filter messages by session ID
+                    if (message.room !== SESSION_ID && message.sessionId !== SESSION_ID) {
+                        return;
+                    }
+                    
+                    if (message.type === 'offer') {
+                        await handleOffer(message.payload, message.from);
+                    } else if (message.type === 'ice-candidate') {
+                        await handleIceCandidate(message.payload, message.from);
+                    } else if (message.type === 'participantJoined') {
+                        console.log('Another participant joined:', message.sessionId);
+                    } else if (message.type === 'participantLeft') {
+                        console.log('Participant left:', message.sessionId);
+                        if (message.from && peerConnections.has(message.from)) {
+                            const pc = peerConnections.get(message.from);
+                            pc.close();
+                            peerConnections.delete(message.from);
+                            updatePlayerCount();
+                        }
+                    }
+                };
+                
+                signalingSocket.onclose = () => {
+                    console.log('Disconnected from signaling server');
+                    connectionState.textContent = 'Disconnected';
+                    if (isSharing) {
+                        status.className = 'status-error';
+                        status.textContent = '✗ Disconnected from signaling server';
+                    }
+                };
+            });
+        }
+        
+        async function startSharing() {
+            try {
+                startBtn.disabled = true;
+                status.textContent = '🔄 Starting screen capture...';
+                
+                // Get screen share with audio
+                localStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: {
+                        cursor: 'always',
+                        displaySurface: 'monitor'
+                    },
+                    audio: {
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        autoGainControl: false,
+                        sampleRate: 48000
+                    }
+                });
+                
+                console.log('Screen capture started');
+                streamStatus.textContent = 'Capturing';
+                
+                // Connect to signaling if not already connected
+                if (!signalingSocket || signalingSocket.readyState !== WebSocket.OPEN) {
+                    await connectSignaling();
+                }
+                
+                // Handle stream end
+                localStream.getVideoTracks()[0].onended = () => {
+                    console.log('Screen share ended');
+                    stopSharing();
+                };
+                
+                isSharing = true;
+                stopBtn.disabled = false;
+                
+                status.className = 'status-connected';
+                status.textContent = '✓ Sharing screen - Waiting for players to connect';
+                
+            } catch (error) {
+                console.error('Error starting screen share:', error);
+                status.className = 'status-error';
+                status.textContent = '✗ Failed to start screen share: ' + error.message;
+                startBtn.disabled = false;
+            }
+        }
+        
+        function stopSharing() {
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+            
+            peerConnections.forEach(pc => pc.close());
+            peerConnections.clear();
+            
+            if (signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
+                signalingSocket.close();
+            }
+            
+            isSharing = false;
+            streamStatus.textContent = 'Not streaming';
+            playerCount.textContent = '0 connected';
+            connectionState.textContent = 'Not connected';
+            
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            
+            status.className = 'status-ready';
+            status.textContent = 'Ready to start game sharing';
+        }
+        
+        async function handleOffer(offer, from) {
+            console.log('Received offer from:', from);
+            
+            const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+            peerConnections.set(from, pc);
+            
+            // Add local stream
+            if (localStream) {
+                localStream.getTracks().forEach(track => {
+                    pc.addTrack(track, localStream);
+                });
+            }
+            
+            // Handle ICE candidates
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    signalingSocket.send(JSON.stringify({
+                        type: 'ice-candidate',
+                        payload: event.candidate,
+                        to: from || 'gameshare-*',
+                        sessionId: SESSION_ID,
+                        room: SESSION_ID
+                    }));
+                }
+            };
+            
+            // Handle data channel for input
+            pc.ondatachannel = (event) => {
+                const channel = event.channel;
+                console.log('Data channel received:', channel.label);
+                
+                if (channel.label === 'input') {
+                    channel.onopen = () => {
+                        console.log('Input channel opened');
+                        updatePlayerCount();
+                    };
+                    
+                    channel.onmessage = (event) => {
+                        try {
+                            const input = JSON.parse(event.data);
+                            handleInputMessage(input);
+                        } catch (e) {
+                            console.error('Failed to parse input:', e);
+                        }
+                    };
+                    
+                    channel.onclose = () => {
+                        console.log('Input channel closed');
+                        updatePlayerCount();
+                    };
+                }
+            };
+            
+            // Set remote description and create answer
+            await pc.setRemoteDescription(offer);
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            
+            // Send answer
+            signalingSocket.send(JSON.stringify({
+                type: 'answer',
+                payload: answer,
+                to: from || 'gameshare-*',
+                sessionId: SESSION_ID,
+                room: SESSION_ID
+            }));
+            
+            console.log('Sent answer to:', from);
+        }
+        
+        async function handleIceCandidate(candidate, from) {
+            const pc = peerConnections.get(from);
+            if (pc) {
+                try {
+                    await pc.addIceCandidate(candidate);
+                    console.log('Added ICE candidate from:', from);
+                } catch (error) {
+                    console.error('Error adding ICE candidate:', error);
+                }
+            }
+        }
+        
+        function updatePlayerCount() {
+            let activeConnections = 0;
+            peerConnections.forEach(pc => {
+                if (pc.connectionState === 'connected') {
+                    activeConnections++;
+                }
+            });
+            connectedPeers = activeConnections;
+            playerCount.textContent = `${activeConnections} connected`;
+            
+            if (activeConnections > 0 && isSharing) {
+                status.textContent = `✓ Sharing to ${activeConnections} player${activeConnections > 1 ? 's' : ''}`;
+            }
+        }
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            stopSharing();
+        });
+    </script>
+</body>
+</html>

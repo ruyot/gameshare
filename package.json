@@ -1,0 +1,24 @@
+{
+  "name": "gameshare-signaling",
+  "version": "1.0.0",
+  "description": "WebRTC signaling server for GameShare",
+  "main": "signaling_server.js",
+  "scripts": {
+    "start": "node signaling_server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ruyot/gameshare.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/ruyot/gameshare/issues"
+  },
+  "homepage": "https://github.com/ruyot/gameshare#readme"
+}

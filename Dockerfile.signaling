@@ -1,0 +1,18 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy signaling server
+COPY signaling_server_fly.js ./
+
+# Expose port
+EXPOSE 3000
+
+# Start the signaling server
+CMD ["node", "signaling_server_fly.js"]

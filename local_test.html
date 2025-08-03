@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GameShare Local Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .status {
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .info {
+            background: #e9ecef;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .button-container {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+        .button {
+            display: inline-block;
+            padding: 20px 40px;
+            font-size: 18px;
+            text-decoration: none;
+            color: white;
+            border-radius: 8px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            border: none;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .host-button {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+        }
+        .client-button {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+        }
+        .fly-button {
+            background: linear-gradient(135deg, #9C27B0, #7B1FA2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 GameShare - Local Testing</h1>
+        
+        <div class="status success">
+            ✅ Local Signaling Server Running on Port 3000
+        </div>
+        
+        <div class="info">
+            <h3>Local Setup Instructions:</h3>
+            <ol style="text-align: left; max-width: 600px; margin: 0 auto;">
+                <li>Make sure <code>input_bridge_direct.py</code> is running</li>
+                <li>Open the Host page on this Windows PC</li>
+                <li>Open the Client page on your Mac using this PC's IP address</li>
+                <li>Both will automatically connect through the local signaling server</li>
+            </ol>
+        </div>
+        
+        <div class="button-container">
+            <button class="button host-button" onclick="window.open('windows_gaming_host_local.html', '_blank')">
+                <strong>🎮 Local Host</strong><br>
+                <small>Share your game</small>
+            </button>
+            <button class="button client-button" onclick="window.open('windows_gaming_client_local.html', '_blank')">
+                <strong>🕹️ Local Client</strong><br>
+                <small>Connect to host</small>
+            </button>
+        </div>
+        
+        <hr style="margin: 40px 0;">
+        
+        <h2>Or Use Fly.io Deployment</h2>
+        <div class="status success">
+            ✅ Fly.io App Available at https://gameshare-web-tabeeb.fly.dev/
+        </div>
+        
+        <div class="button-container">
+            <button class="button fly-button" onclick="window.open('https://gameshare-web-tabeeb.fly.dev/', '_blank')">
+                <strong>☁️ Open Fly.io App</strong><br>
+                <small>No local setup needed</small>
+            </button>
+        </div>
+        
+        <div style="margin-top: 30px; padding: 20px; background: #fff3cd; border-radius: 5px;">
+            <h3>🔍 For Mac Client:</h3>
+            <p>When using local signaling, update the signaling URL in the client to:</p>
+            <code style="font-size: 18px; background: white; padding: 10px; border-radius: 5px; display: inline-block;">
+                ws://<span style="color: #007bff;">YOUR_WINDOWS_IP</span>:3000
+            </code>
+            <p style="margin-top: 10px;">Replace YOUR_WINDOWS_IP with this PC's IP address (e.g., 10.0.0.105)</p>
+        </div>
+    </div>
+</body>
+</html>
