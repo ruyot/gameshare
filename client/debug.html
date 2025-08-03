@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GameShare Debug Client</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #1a1a1a;
+            color: #fff;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        video {
+            width: 100%;
+            max-width: 800px;
+            border: 2px solid #444;
+            background: #000;
+        }
+        .debug-panel {
+            background: #2a2a2a;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .log {
+            background: #1a1a1a;
+            padding: 10px;
+            height: 300px;
+            overflow-y: auto;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:disabled {
+            background: #666;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+        .stat-item {
+            background: #333;
+            padding: 10px;
+            text-align: center;
+        }
+        .connection-status {
+            padding: 5px 10px;
+            background: #f44336;
+            display: inline-block;
+            margin: 10px 0;
+        }
+        .connection-status.connected {
+            background: #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 GameShare Debug Client</h1>
+        
+        <div class="debug-panel">
+            <h3>Connection</h3>
+            <input type="text" id="signalingUrl" value="wss://gameshare-clientview.fly.dev/signaling?session=default-session" style="width: 500px;">
+            <button id="connectBtn">Connect</button>
+            <button id="disconnectBtn" disabled>Disconnect</button>
+            <div class="connection-status" id="connectionStatus">Disconnected</div>
+        </div>
+
+        <div class="debug-panel">
+            <h3>Video Stream</h3>
+            <video id="gameVideo" autoplay muted playsinline controls></video>
+            <div id="videoInfo">
+                Resolution: <span id="videoResolution">--</span> | 
+                Ready State: <span id="videoReadyState">--</span> |
+                Network State: <span id="videoNetworkState">--</span>
+            </div>
+        </div>
+
+        <div class="debug-panel">
+            <h3>WebRTC Stats</h3>
+            <div class="stats">
+                <div class="stat-item">
+                    <h4>Video Packets</h4>
+                    <div id="packetsReceived">--</div>
+                </div>
+                <div class="stat-item">
+                    <h4>Bytes Received</h4>
+                    <div id="bytesReceived">--</div>
+                </div>
+                <div class="stat-item">
+                    <h4>Frames Decoded</h4>
+                    <div id="framesDecoded">--</div>
+                </div>
+                <div class="stat-item">
+                    <h4>FPS</h4>
+                    <div id="fps">--</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="debug-panel">
+            <h3>Debug Log</h3>
+            <div class="log" id="debugLog"></div>
+        </div>
+    </div>
+
+    <script>
+        const log = (msg) => {
+            const timestamp = new Date().toISOString().substr(11, 12);
+            const logEl = document.getElementById('debugLog');
+            logEl.textContent += `[${timestamp}] ${msg}\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+            console.log(msg);
+        };
+
+        let ws = null;
+        let pc = null;
+        let statsInterval = null;
+
+        document.getElementById('connectBtn').addEventListener('click', connect);
+        document.getElementById('disconnectBtn').addEventListener('click', disconnect);
+
+        async function connect() {
+            try {
+                log('Connecting to signaling server...');
+                const signalingUrl = document.getElementById('signalingUrl').value;
+                
+                ws = new WebSocket(signalingUrl);
+                
+                ws.onopen = () => {
+                    log('✅ Connected to signaling server');
+                    document.getElementById('connectionStatus').textContent = 'Connected';
+                    document.getElementById('connectionStatus').classList.add('connected');
+                    document.getElementById('connectBtn').disabled = true;
+                    document.getElementById('disconnectBtn').disabled = false;
+                    
+                    // Send join message
+                    ws.send(JSON.stringify({ type: 'join', client_type: 'client' }));
+                };
+
+                ws.onmessage = async (event) => {
+                    const msg = JSON.parse(event.data);
+                    log(`📨 Received: ${msg.type}`);
+                    
+                    switch (msg.type) {
+                        case 'joined':
+                            log('✅ Joined session successfully');
+                            setupPeerConnection();
+                            break;
+                        case 'offer':
+                            await handleOffer(msg);
+                            break;
+                        case 'ice-candidate':
+                            await handleIceCandidate(msg);
+                            break;
+                        default:
+                            log(`Unknown message type: ${msg.type}`);
+                    }
+                };
+
+                ws.onerror = (error) => {
+                    log(`❌ WebSocket error: ${error}`);
+                };
+
+                ws.onclose = () => {
+                    log('WebSocket closed');
+                    disconnect();
+                };
+
+            } catch (error) {
+                log(`❌ Connection failed: ${error.message}`);
+            }
+        }
+
+        function setupPeerConnection() {
+            log('Setting up peer connection...');
+            
+            pc = new RTCPeerConnection({
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' }
+                ]
+            });
+
+            pc.ontrack = (event) => {
+                log(`🎥 Received track: ${event.track.kind} (id: ${event.track.id})`);
+                if (event.track.kind === 'video') {
+                    const video = document.getElementById('gameVideo');
+                    video.srcObject = event.streams[0];
+                    log(`Video srcObject set. Stream active: ${event.streams[0].active}`);
+                    
+                    // Monitor video element
+                    video.addEventListener('loadstart', () => log('Video: loadstart'));
+                    video.addEventListener('loadedmetadata', () => {
+                        log(`Video: loadedmetadata - ${video.videoWidth}x${video.videoHeight}`);
+                        updateVideoInfo();
+                    });
+                    video.addEventListener('loadeddata', () => log('Video: loadeddata'));
+                    video.addEventListener('canplay', () => log('Video: canplay'));
+                    video.addEventListener('playing', () => log('Video: playing'));
+                    video.addEventListener('error', (e) => log(`❌ Video error: ${e.message || 'Unknown'}`));
+                    video.addEventListener('stalled', () => log('⚠️ Video stalled'));
+                    video.addEventListener('waiting', () => log('⚠️ Video waiting'));
+                }
+            };
+
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    log(`🧊 Sending ICE candidate: ${event.candidate.candidate}`);
+                    ws.send(JSON.stringify({
+                        type: 'ice-candidate',
+                        candidate: event.candidate.candidate,
+                        sdp_mid: event.candidate.sdpMid,
+                        sdp_mline_index: event.candidate.sdpMLineIndex
+                    }));
+                }
+            };
+
+            pc.onconnectionstatechange = () => {
+                log(`📡 Connection state: ${pc.connectionState}`);
+            };
+
+            pc.oniceconnectionstatechange = () => {
+                log(`🧊 ICE connection state: ${pc.iceConnectionState}`);
+            };
+
+            pc.onsignalingstatechange = () => {
+                log(`📶 Signaling state: ${pc.signalingState}`);
+            };
+
+            // Start collecting stats
+            startStatsCollection();
+        }
+
+        async function handleOffer(msg) {
+            log('📥 Processing offer...');
+            
+            await pc.setRemoteDescription(new RTCSessionDescription({
+                type: 'offer',
+                sdp: msg.sdp
+            }));
+            
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            
+            ws.send(JSON.stringify({
+                type: 'answer',
+                sdp: answer.sdp,
+                session_id: msg.session_id
+            }));
+            
+            log('📤 Answer sent');
+        }
+
+        async function handleIceCandidate(msg) {
+            log('🧊 Adding remote ICE candidate');
+            try {
+                await pc.addIceCandidate(new RTCIceCandidate({
+                    candidate: msg.candidate,
+                    sdpMid: msg.sdp_mid,
+                    sdpMLineIndex: msg.sdp_mline_index
+                }));
+            } catch (error) {
+                log(`❌ Failed to add ICE candidate: ${error.message}`);
+            }
+        }
+
+        function updateVideoInfo() {
+            const video = document.getElementById('gameVideo');
+            document.getElementById('videoResolution').textContent = `${video.videoWidth}x${video.videoHeight}`;
+            document.getElementById('videoReadyState').textContent = video.readyState;
+            document.getElementById('videoNetworkState').textContent = video.networkState;
+        }
+
+        async function startStatsCollection() {
+            let lastBytes = 0;
+            let lastFrames = 0;
+            let lastTime = Date.now();
+            
+            statsInterval = setInterval(async () => {
+                if (!pc || pc.connectionState !== 'connected') return;
+                
+                try {
+                    const stats = await pc.getStats();
+                    stats.forEach(report => {
+                        if (report.type === 'inbound-rtp' && report.kind === 'video') {
+                            const currentTime = Date.now();
+                            const timeDiff = (currentTime - lastTime) / 1000;
+                            
+                            document.getElementById('packetsReceived').textContent = report.packetsReceived || 0;
+                            document.getElementById('bytesReceived').textContent = formatBytes(report.bytesReceived || 0);
+                            document.getElementById('framesDecoded').textContent = report.framesDecoded || 0;
+                            
+                            // Calculate FPS
+                            if (lastFrames > 0 && timeDiff > 0) {
+                                const fps = Math.round((report.framesDecoded - lastFrames) / timeDiff);
+                                document.getElementById('fps').textContent = fps;
+                            }
+                            
+                            lastBytes = report.bytesReceived || 0;
+                            lastFrames = report.framesDecoded || 0;
+                            lastTime = currentTime;
+                            
+                            // Log if no frames are being decoded
+                            if (report.packetsReceived > 0 && report.framesDecoded === 0) {
+                                log('⚠️ Receiving packets but no frames decoded!');
+                            }
+                        }
+                    });
+                } catch (error) {
+                    log(`Stats error: ${error.message}`);
+                }
+                
+                updateVideoInfo();
+            }, 1000);
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function disconnect() {
+            log('Disconnecting...');
+            
+            if (statsInterval) {
+                clearInterval(statsInterval);
+                statsInterval = null;
+            }
+            
+            if (pc) {
+                pc.close();
+                pc = null;
+            }
+            
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+            
+            document.getElementById('connectionStatus').textContent = 'Disconnected';
+            document.getElementById('connectionStatus').classList.remove('connected');
+            document.getElementById('connectBtn').disabled = false;
+            document.getElementById('disconnectBtn').disabled = true;
+            
+            const video = document.getElementById('gameVideo');
+            video.srcObject = null;
+        }
+    </script>
+</body>
+</html>

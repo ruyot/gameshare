@@ -136,8 +136,8 @@ impl WebRTCStreamer {
         ));
 
         // Add video track to peer connection
-        let _rtp_sender = peer_connection.add_track(video_track.clone()).await?;
-        info!("Added video track to peer connection");
+        let rtp_sender = peer_connection.add_track(video_track.clone()).await?;
+        info!("Added video track to peer connection - sender id: {:?}", rtp_sender);
 
         // Create audio track if enabled
         let audio_track = if config.capture.capture_audio {
@@ -216,6 +216,12 @@ impl WebRTCStreamer {
             let mut pts = 0u64;
             info!("Frame sending task started");
             while let Some(frame) = frame_receiver.recv().await {
+                // Log frame details for debugging
+                if pts < 10 || pts % 150 == 0 || frame.is_keyframe {
+                    debug!("Sending frame to WebRTC: pts={}, size={} bytes, keyframe={}", 
+                           pts, frame.data.len(), frame.is_keyframe);
+                }
+                
                 let sample = Sample {
                     data: Bytes::from(frame.data),
                     duration: Duration::from_millis(33),
@@ -224,8 +230,8 @@ impl WebRTCStreamer {
                 if let Err(e) = video_track_clone.write_sample(&sample).await {
                     error!("Error sending video frame: {}", e);
                 } else {
-                    if pts % 150 == 0 { // Log every 5 seconds at 30fps
-                        debug!("Successfully sent frame #{} to WebRTC track", pts);
+                    if pts < 5 || pts % 150 == 0 { // Log first few frames and every 5 seconds at 30fps
+                        debug!("Successfully wrote frame #{} to WebRTC track (size: {} bytes)", pts, frame.data.len());
                     }
                 }
                 pts += 1;
@@ -248,6 +254,14 @@ impl WebRTCStreamer {
     }
 
     pub async fn send_frame(&self, frame: EncodedFrame) -> Result<()> {
+        static FRAME_COUNT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        let count = FRAME_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        
+        if count < 10 || count % 150 == 0 {
+            debug!("send_frame called: count={}, frame_size={} bytes, keyframe={}", 
+                   count, frame.data.len(), frame.is_keyframe);
+        }
+        
         match self.frame_sender.send(frame).await {
             Ok(()) => {
                 // Frame queued successfully

@@ -139,20 +139,25 @@ async fn main() -> Result<()> {
         // Main game loop
         let mut frame_count = 0u64;
         let start_time = std::time::Instant::now();
+        info!("Starting main capture loop");
 
         loop {
             // Capture frame from game window
-            if let Some(frame) = capture_system.capture_frame().await? {
-                // Encode frame
-                if let Some(encoded_frame) = encoder.encode_frame(frame).await? {
-                    // Log every 5 seconds
-                    if frame_count % (u64::from(config.target_framerate) * 5) == 0 {
-                        debug!("Captured and encoded frame #{}", frame_count);
-                    }
-                    // Broadcast to all connected sessions
-                    host_mgr.broadcast_frame(encoded_frame).await?;
-                    
-                    frame_count += 1;
+            match capture_system.capture_frame().await {
+                Ok(Some(frame)) => {
+                    debug!("Captured frame {} with {} bytes", frame_count, frame.data.len());
+                    // Encode frame
+                    match encoder.encode_frame(frame).await {
+                        Ok(Some(encoded_frame)) => {
+                            debug!("Encoded frame {} with {} bytes", frame_count, encoded_frame.data.len());
+                            // Log every 5 seconds
+                            if frame_count % (u64::from(config.target_framerate) * 5) == 0 {
+                                info!("Captured and encoded frame #{}", frame_count);
+                            }
+                            // Broadcast to all connected sessions
+                            host_mgr.broadcast_frame(encoded_frame).await?;
+                            
+                            frame_count += 1;
                     
                     // Log performance stats every 5 seconds
                     if frame_count % (u64::from(config.target_framerate) * 5) == 0 {
@@ -174,6 +179,22 @@ async fn main() -> Result<()> {
                             warn!("Memory usage above target: {:.1} MB > 100 MB", memory_usage);
                         }
                     }
+                        }
+                        Ok(None) => {
+                            debug!("No encoded frame produced");
+                        }
+                        Err(e) => {
+                            error!("Failed to encode frame: {}", e);
+                        }
+                    }
+                }
+                Ok(None) => {
+                    // No frame captured - this might be normal
+                    tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+                }
+                Err(e) => {
+                    error!("Failed to capture frame: {}", e);
+                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                 }
             }
 
