@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use tokio::sync::mpsc;
 use std::sync::{Arc, Mutex};
+use uuid::Uuid; // Random id generation
 
 use crate::signal;  // Signalling message enum
 
@@ -19,6 +20,32 @@ pub struct Room {
 
 pub type MappedRoom = Arc<Mutex<HashMap<String, Room>>>;
 
+// for the function signature we need a reference to the shared map
+
+
+pub fn assign_room(rooms:&MappedRoom, host_tx:PeerTx) -> Result<String, String> {
+
+    let id = Uuid::new_v4().to_string();
+
+    let room = Room {
+        host_tx: host_tx,
+        client_tx: None,
+    };
+    let mut map = rooms.lock().unwrap(); // Lock the hashmap check for error via unwrap (shorter lock durations tend to be better)
+    map.insert(id.clone(), room);
+
+    Ok(id)
+}
+
+
+// The overall idea of assign is that we want to be able to add a new room instance to the hashmap (where were storing the rooms)
+
+
+
+// For assign we want to acquire the lock 
+// Construct an instance of the room
+// Insert into the map
+// Release the lock
 
 
 
