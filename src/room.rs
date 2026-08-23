@@ -37,8 +37,33 @@ pub fn assign_room(rooms:&MappedRoom, host_tx:PeerTx) -> Result<String, String> 
     Ok(id)
 }
 
-
 // The overall idea of assign is that we want to be able to add a new room instance to the hashmap (where were storing the rooms)
+
+
+// For the join room function a room already exists 
+// A second peer wants (client) wants to join the room 
+// Theyre gonna need the room id to connect to the room and we need their channel too - &str lookup by reference
+pub fn join_room(id:&str, rooms:&MappedRoom, client_tx:PeerTx) -> Result<(), String> {
+
+    // is_some() and is_none() let you boolean check the values in options
+    let mut map = rooms.lock().unwrap();
+
+    if let Some(room) = map.get_mut(id) {
+        if room.client_tx.is_some(){
+            return Err("This room is full".to_string());
+        }
+        else {
+            room.client_tx = Some(client.tx);
+        }
+    } else {
+       return Err("Room does not exist".to_string());
+    }
+
+    Ok(())
+}
+
+
+
 
 
 
