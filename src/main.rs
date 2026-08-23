@@ -1,4 +1,6 @@
 mod echo_server;
+mod room;
+mod signal;
 
 #[tokio::main]
 async fn main() {
