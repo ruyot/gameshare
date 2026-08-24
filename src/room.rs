@@ -10,7 +10,8 @@ use crate::signal::SignallingMessage;  // Signalling message enum
 // Arc gives you shared ownership at runtime so that we can increment the reference count via an atomic reference counter (arc) everytime you clone (shallow copy)
 
 // Channel Sender alias (channels are split into tx and rx)
-type PeerTx = mpsc::Sender<SignallingMessage>;
+// Unbounded instead of bounded
+type PeerTx = mpsc::UnboundedSender<SignallingMessage>;
 
 // What we store in a single room
 pub struct Room {
