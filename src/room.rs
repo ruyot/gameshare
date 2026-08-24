@@ -3,7 +3,7 @@ use tokio::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use uuid::Uuid; // Random id generation
 
-use crate::signal;  // Signalling message enum
+use crate::signal::SignallingMessage;  // Signalling message enum
 
 // Mapping a string key to a Room data (defined in the struct)
 // Mutex provides mutual exclusion so only one task/thread can read or write to the inner HashMap at any given millisecond
@@ -22,7 +22,7 @@ pub type MappedRoom = Arc<Mutex<HashMap<String, Room>>>;
 
 // for the function signature we need a reference to the shared map
 
-
+// The overall idea of assign is that we want to be able to add a new room instance to the hashmap (where were storing the rooms)
 pub fn assign_room(rooms:&MappedRoom, host_tx:PeerTx) -> Result<String, String> {
 
     let id = Uuid::new_v4().to_string();
@@ -37,7 +37,10 @@ pub fn assign_room(rooms:&MappedRoom, host_tx:PeerTx) -> Result<String, String> 
     Ok(id)
 }
 
-// The overall idea of assign is that we want to be able to add a new room instance to the hashmap (where were storing the rooms)
+// For assign we want to acquire the lock 
+// Construct an instance of the room
+// Insert into the map
+// Release the lock
 
 
 // For the join room function a room already exists 
@@ -53,7 +56,7 @@ pub fn join_room(id:&str, rooms:&MappedRoom, client_tx:PeerTx) -> Result<(), Str
             return Err("This room is full".to_string());
         }
         else {
-            room.client_tx = Some(client.tx);
+            room.client_tx = Some(client_tx);
         }
     } else {
        return Err("Room does not exist".to_string());
@@ -62,16 +65,35 @@ pub fn join_room(id:&str, rooms:&MappedRoom, client_tx:PeerTx) -> Result<(), Str
     Ok(())
 }
 
+/*
+Given room x if the sender is peer A give me peer B's inbox handle
+If the sender is peer b give me peer a's inbox handle
+*/
 
+// Based on a room
+// If the sender is Peer A give them peer B's handle
+// If the sender is Peer B give them peer A's inbox handle
 
+pub fn get_opposing_peer_tx (id:&str, rooms:&MappedRoom, is_host:bool) -> Result<PeerTx, String> {
 
+    let map = rooms.lock().unwrap();
 
-
-// For assign we want to acquire the lock 
-// Construct an instance of the room
-// Insert into the map
-// Release the lock
-
+    if let Some(room) = map.get(id) {
+        if is_host{
+            if room.client_tx.is_none() {
+               return Err("The client hasn't connected yet".to_string());
+            }
+            else{
+                return Ok(room.client_tx.as_ref().unwrap().clone());
+            }
+        }
+        else{
+            return Ok(room.host_tx.clone());
+        }
+    } else {
+        return Err("Room not found".to_string());
+    }
+}
 
 
 
