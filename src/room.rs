@@ -95,7 +95,18 @@ pub fn get_opposing_peer_tx (id:&str, rooms:&MappedRoom, is_host:bool) -> Result
     }
 }
 
+pub fn remove_room (id:&str, rooms:&MappedRoom) -> Result<(), String> {
+    let mut map = rooms.lock().unwrap();
+    
+    if map.remove(id).is_some() {
+        println!("Removed room {}", id);
+    }
+    else {
+        return Err("Provided room not found".to_string());
+    }
 
+    Ok(())
+}
 
 /*
 async fn channel() {
