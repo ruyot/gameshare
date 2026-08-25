@@ -1,29 +1,37 @@
-//! A simple echo server.
-//!
-//! You can test this out by running:
-//!
-//!     cargo run 127.0.0.1:12345
-//!
-//! And then in another window run:
-//!
-//!     cargo run -- 127.0.0.1:12345
-//!
-//!
-//! Type a message into the client window, press enter to send it and
-//! see it echoed back.
-
-// Traversing module paths using :: like using / in a file path
-use std::{env, io::Error}; // in the standard library in the io module grab error
-// futures_util is a utility belt for working with async streams and futures 
-use futures_util::{future, StreamExt, TryStreamExt};
-// StreamExt adds iterator-like methods to async streams .next(), .map(), .filter()
-// TryStreamExt has the same idea but for error producing streams .try_for_each() 
-// future contains utilities for combining futures like running two concurrently
+use core::error;
+use std::{collections::HashMap, env, io::Error, sync::Arc}; 
+use futures_util::{StreamExt, TryStreamExt, future, lock::Mutex};
 use log::info;
-// logging - info!("some message") logging API 
 use tokio::net::{TcpListener, TcpStream};
+use crate::room::Room;
 
 // A future is a value that may not be ready now but will become ready at some point in the future
+
+
+pub async fn start(addr:&str) -> Result<(), Box<dyn error::Error>>{
+
+    let map = Arc::new(Mutex::new(HashMap::<String, Room>::new()));
+
+    let try_socket = TcpListener::bind(&addr).await?;
+
+    while let Ok((stream, _)) = try_socket.accept().await{
+    
+        tokio::spawn(connection_helper(stream, map.clone())); // Hand off execution to background task spawner
+
+    }
+
+
+    Ok(())
+}
+
+async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room>>>) {
+
+
+}
+
+
+
+
 
 pub async fn run() -> Result<(), Error> {
     // implementation of log API using stderr
@@ -40,7 +48,7 @@ pub async fn run() -> Result<(), Error> {
     let addr = env::args().nth(1).unwrap_or_else(|| "127.0.0.1:8080".to_string());
 
     // Create the event loop and TCP listener we'll accept connections on
-    // Control plane - TCP/WebSocket signaling server
+    // Control plane - TCP/WebSocket signalling server
     // The bind function initializes a TCP server by reserving a specific IP address and port number 
     // passing a reference to the address allows for borrowing instead of transferring ownership
     // &addr is a pointer to addrs memory, not a copy of it 
@@ -84,3 +92,16 @@ async fn accept_connection(stream: TcpStream) {
         .await
         .expect("Failed to forward messages")
 }
+
+/*
+// Traversing module paths using :: like using / in a file path
+use std::{collections::HashMap, env, io::Error, sync::Arc}; // in the standard library in the io module grab error
+// futures_util is a utility belt for working with async streams and futures 
+use futures_util::{StreamExt, TryStreamExt, future, lock::Mutex};
+// StreamExt adds iterator-like methods to async streams .next(), .map(), .filter()
+// TryStreamExt has the same idea but for error producing streams .try_for_each() 
+// future contains utilities for combining futures like running two concurrently
+use log::info;
+// logging - info!("some message") logging API 
+use tokio::net::{TcpListener, TcpStream};
+*/
