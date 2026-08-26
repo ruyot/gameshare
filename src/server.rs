@@ -3,6 +3,7 @@ use std::{collections::HashMap, env, io::Error, sync::Arc};
 use futures_util::{StreamExt, TryStreamExt, future, lock::Mutex};
 use log::info;
 use tokio::net::{TcpListener, TcpStream};
+use tokio::sync::mpsc;
 use crate::room::Room;
 
 // A future is a value that may not be ready now but will become ready at some point in the future
@@ -14,17 +15,81 @@ pub async fn start(addr:&str) -> Result<(), Box<dyn error::Error>>{
 
     let try_socket = TcpListener::bind(&addr).await?;
 
+    // Start listening for connections
     while let Ok((stream, _)) = try_socket.accept().await{
     
         tokio::spawn(connection_helper(stream, map.clone())); // Hand off execution to background task spawner
 
     }
 
-
     Ok(())
 }
 
 async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room>>>) {
+
+    // Creates a struct with both stream (send) and sink (receive)
+    let ws_stream = tokio_tungstenite::accept_async(stream)
+        .await
+        .expect("There was an Error during the websocket handshake");
+
+    let (write,read) = ws_stream.split();
+
+    // The server doesnt know if the client wants to host a new room or join an existing room 
+
+    // Connections need their own internal messaging queues 
+    let (tx, rx) = mpsc::unbounded_channel::<String>();
+
+    // For our connection loop we need to keep track of room id and whether the person sending us (the server) is the host or not
+    let mut room_id: Option<String> = None;
+
+    let mut is_host = false;
+
+
+    loop {
+        tokio::select! {
+
+        // Websocket branch
+        Some(msg) = read.next() => {
+
+
+        }
+
+        // Internal channel branch
+        Some(msg) = rx.recv() => {
+
+
+        }
+
+        else => break
+
+        }
+
+    }
+/*
+    loop {
+        tokio::select! {
+        // Branch 1: inbound message from clients websocket
+        Some(msg) = read.next() => {
+            // Parse messages here
+            // If something is assign or join - we should handle room setup
+            // This is why we need to know if someone is a host or not because that determines whether or not assign is valid or join is (dont believe we enforce this in the assign room function)
+        
+        }
+
+        // Branch 2: Outbound message from partner via internal channel
+        Some(msg) = rx.recv() => {
+        // In this branch another task gave us a message into this tasks mailbox 
+        // We need to send that message through websocket to the physical device that this task (that we are in) is based off of
+        }
+
+        // Connection closed or channel disconnected
+        else => break,
+
+        } 
+    }    
+}   
+*/
+
 
 
 }
@@ -83,8 +148,8 @@ async fn accept_connection(stream: TcpStream) {
     info!("New WebSocket connection: {}", addr);
 
     // .split splits stream into two objects stream and sink
-    // Stream is (incoming / reading) 
-    // Sink is (outgoing / writing)
+    // Stream is (incoming / reading) -> receive
+    // Sink is (outgoing / writing) -> send
     let (write, read) = ws_stream.split();
     // We should not forward messages other than text or binary.
     read.try_filter(|msg| future::ready(msg.is_text() || msg.is_binary()))
