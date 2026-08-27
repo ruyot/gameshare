@@ -4,7 +4,10 @@ use futures_util::{StreamExt, TryStreamExt, future, lock::Mutex};
 use log::info;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
+use serde_json;
 use crate::room::Room;
+use crate::signal::SignallingMessage;
+
 
 // A future is a value that may not be ready now but will become ready at some point in the future
 
@@ -25,7 +28,7 @@ pub async fn start(addr:&str) -> Result<(), Box<dyn error::Error>>{
     Ok(())
 }
 
-async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room>>>) {
+async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room>>>) -> Result<(), Box<dyn error::Error>> {
 
     // Creates a struct with both stream (send) and sink (receive)
     let ws_stream = tokio_tungstenite::accept_async(stream)
@@ -46,18 +49,24 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
 
 
     loop {
-        tokio::select! {
+        tokio::select! {   
 
         // Websocket branch
+        // We destruct the option and result and convert the message to text (one of its defined possible fields within the enum)
         Some(msg) = read.next() => {
-
-
+            // Because the signalling message enum has both serialize and deserialize we can convert directly into the data we defined in the enum
+            // However serde needs a way to differentiate which data type it needs to convert to by picking correctly within the enum
+            // To do this differentiation we make use of internal tagging, internal tagging means that the name of the variant is matched against the message when choosing
+            if let Ok(msg) = msg {
+                let text = msg.to_text()?;
+                let parsed_msg: SignallingMessage = serde_json::from_str(text)?;
+            }
+    
         }
 
         // Internal channel branch
         Some(msg) = rx.recv() => {
-
-
+            
         }
 
         else => break
