@@ -1,11 +1,11 @@
 use core::error;
-use std::{collections::HashMap, env, io::Error, sync::Arc}; 
-use futures_util::{StreamExt, TryStreamExt, future, lock::Mutex};
+use std::{collections::HashMap, env, io::Error, sync::{Arc, Mutex}}; 
+use futures_util::{StreamExt, TryStreamExt, future};
 use log::info;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
 use serde_json;
-use crate::room::Room;
+use crate::room::{Room, assign_room, get_opposing_peer_tx, join_room};
 use crate::signal::SignallingMessage;
 
 
@@ -40,7 +40,7 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
     // The server doesnt know if the client wants to host a new room or join an existing room 
 
     // Connections need their own internal messaging queues 
-    let (tx, rx) = mpsc::unbounded_channel::<String>();
+    let (tx, rx) = mpsc::unbounded_channel::<SignallingMessage>();
 
     // For our connection loop we need to keep track of room id and whether the person sending us (the server) is the host or not
     let mut room_id: Option<String> = None;
@@ -60,7 +60,32 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
             if let Ok(msg) = msg {
                 let text = msg.to_text()?;
                 let parsed_msg: SignallingMessage = serde_json::from_str(text)?;
+            
+            match parsed_msg {
+                // Assign - Give me (host) a room (all variants need to define their fields)
+                SignallingMessage::Assign {} => {
+                    let room_id = assign_room(&map, tx);
+                } 
+                // Join - Let me (client) join an existing room
+                SignallingMessage::Join {room_id} => {
+                    join_room(room_id, &map, tx);
+                }
+                
+                // Relay - Let me send a message to my peer
+                SignallingMessage::Relay {payload} => {
+                    if room_id.is_some() {
+                        let id = room_id.unwrap();
+                        let peertx = get_opposing_peer_tx(&id, &map, is_host);
+                    }
+                    
+                    // write the payload to the peertx  
+                }
+                // Wildcard for last two that dont need to be matched
+                _ => (),              
+                }
+
             }
+
     
         }
 
