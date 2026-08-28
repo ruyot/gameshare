@@ -1,6 +1,6 @@
 use core::error;
 use std::{collections::HashMap, env, io::Error, sync::{Arc, Mutex}}; 
-use futures_util::{StreamExt, TryStreamExt, future};
+use futures_util::{SinkExt, StreamExt, TryStreamExt, future};
 use log::info;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
@@ -9,8 +9,8 @@ use crate::room::{Room, assign_room, get_opposing_peer_tx, join_room};
 use crate::signal::SignallingMessage;
 
 
-// A future is a value that may not be ready now but will become ready at some point in the future
 
+// A future is a value that may not be ready now but will become ready at some point in the future
 
 pub async fn start(addr:&str) -> Result<(), Box<dyn error::Error>>{
 
@@ -28,7 +28,7 @@ pub async fn start(addr:&str) -> Result<(), Box<dyn error::Error>>{
     Ok(())
 }
 
-async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room>>>) -> Result<(), Box<dyn error::Error>> {
+async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room>>>) -> Result<(), Box<dyn error::Error + Send + Sync>> {
 
     // Creates a struct with both stream (send) and sink (receive)
     let ws_stream = tokio_tungstenite::accept_async(stream)
@@ -64,7 +64,21 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
             match parsed_msg {
                 // Assign - Give me (host) a room (all variants need to define their fields)
                 SignallingMessage::Assign {} => {
-                    let room_id = assign_room(&map, tx);
+                    room_id = assign_room(&map, tx.clone()).ok();
+
+                    let Some(id) = room_id else {
+                        return Err("Failed to assign a room and an id was not generated".into()) // convert to the error type we need using into
+                    };
+
+                    let room = SignallingMessage::Assigned { room_id: id.clone()};
+
+                    // Serialize the enum variant so we can send it back to the host
+                    let serialized = serde_json::to_string(&room) else {
+                        return Err("Failed to serialize enum variant Assigned".into())
+                    };
+
+                    write.send(tokio_tungstenite::tungstenite::protocol::Message::Text(serialized)).await?;
+
                 } 
                 // Join - Let me (client) join an existing room
                 SignallingMessage::Join {room_id} => {
