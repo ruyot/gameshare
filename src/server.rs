@@ -8,10 +8,6 @@ use serde_json;
 use crate::room::{Room, assign_room, get_opposing_peer_tx, join_room};
 use crate::signal::SignallingMessage;
 
-
-
-// A future is a value that may not be ready now but will become ready at some point in the future
-
 pub async fn start(addr:&str) -> Result<(), Box<dyn error::Error>>{
 
     let map = Arc::new(Mutex::new(HashMap::<String, Room>::new()));
@@ -47,6 +43,7 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
 
     let mut is_host = false;
 
+    type Message = tokio_tungstenite::tungstenite::protocol::Message; // Simplify pulling the message enum from tokio tungstenite
 
     loop {
         tokio::select! {   
@@ -66,7 +63,7 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
                 SignallingMessage::Assign {} => {
                     room_id = assign_room(&map, tx.clone()).ok();
 
-                    let Some(id) = room_id else {
+                    let Some(id) = &room_id else {
                         return Err("Failed to assign a room and an id was not generated".into()) // convert to the error type we need using into
                     };
 
@@ -77,12 +74,35 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
                         return Err("Failed to serialize enum variant Assigned".into())
                     };
 
-                    write.send(tokio_tungstenite::tungstenite::protocol::Message::Text(serialized)).await?;
+                    write.send(Message::text(serialized?)).await?;
 
+                    is_host = true;
                 } 
-                // Join - Let me (client) join an existing room
+                // Join - Let me (client) join an existing room (the client gives us the id for the room in the message)
                 SignallingMessage::Join {room_id} => {
-                    join_room(room_id, &map, tx);
+
+                    
+                    // Have to return a success or an error 
+                    let Ok(joined) = join_room(&room_id, &map, tx.clone());
+
+
+
+
+
+
+                    let (Ok(joined), id) = (join_room(&room_id, &map, tx.clone()), room_id) else {
+                        let error = SignallingMessage::Error { error_message : "Failed to join a room, are you sure your id is correct or that the room exists?".to_string()};
+                        let serialized_error = serde_json::to_string(&error) else {
+                            return Err("Failed to serialize error message for join".into())
+                        };
+                        write.send(Message::text(error.into())).await;
+                        return;
+                    };
+                    
+                    room_id = id;
+
+                    is_host = false;
+
                 }
                 
                 // Relay - Let me send a message to my peer
