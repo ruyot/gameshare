@@ -70,38 +70,69 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
                     let room = SignallingMessage::Assigned { room_id: id.clone()};
 
                     // Serialize the enum variant so we can send it back to the host
-                    let serialized = serde_json::to_string(&room) else {
-                        return Err("Failed to serialize enum variant Assigned".into())
-                    };
+                    let serialized = serde_json::to_string(&room);
 
-                    write.send(Message::text(serialized?)).await?;
+                        match serialized {
+                            Ok(msg) => { 
+                                write.send(Message::text(msg)).await?;
+                                is_host = true;
+                            }
 
-                    is_host = true;
-                } 
+                            Err(_) => {
+                                return Err("Failed to serialize enum variant Assigned".into())
+                            }
+                        }
+                    } 
+                 
                 // Join - Let me (client) join an existing room (the client gives us the id for the room in the message)
-                SignallingMessage::Join {room_id} => {
+                SignallingMessage::Join {room_id : provided_id} => {
 
-                    
                     // Have to return a success or an error 
-                    let Ok(joined) = join_room(&room_id, &map, tx.clone());
+                    let joined = join_room(&provided_id, &map, tx.clone());
 
+                    match joined {
+                        Ok(_) => {
 
+                            let success = SignallingMessage::Joined {success_message : format!("Joined room {provided_id} successfully")};
 
+                            let serialized_success = serde_json::to_string(&success);
 
+                            match serialized_success {
+                                Ok(msg) => {
+                                    write.send(Message::text(msg)).await?;
 
+                                    is_host = false;
 
-                    let (Ok(joined), id) = (join_room(&room_id, &map, tx.clone()), room_id) else {
-                        let error = SignallingMessage::Error { error_message : "Failed to join a room, are you sure your id is correct or that the room exists?".to_string()};
-                        let serialized_error = serde_json::to_string(&error) else {
-                            return Err("Failed to serialize error message for join".into())
-                        };
-                        write.send(Message::text(error.into())).await;
-                        return;
-                    };
+                                    room_id = Some(provided_id);
+                                }
+
+                                Err(_) => {
+                                    return Err("Failed to serialize success message for join".into())
+                                }
+                            }
+                        }
+
                     
-                    room_id = id;
+                        Err(_) => {
+                            let error = SignallingMessage::Error { error_message : "Failed to join a rooom, are you sure the provided id is correct or that the room exists?".to_string()};
+                            
+                            let serialized_error = serde_json::to_string(&error);
 
-                    is_host = false;
+                            match serialized_error {
+
+                                Ok(msg) => {
+                                    write.send(Message::text(msg)).await?;
+                                }
+
+                                Err(_) => {
+                                    return Err("Failed to serialize error message for join".into())
+                                }
+
+                            }
+                            
+                        }
+
+                    }
 
                 }
                 
