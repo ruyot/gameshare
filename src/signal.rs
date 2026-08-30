@@ -17,6 +17,9 @@ pub enum SignallingMessage {
     Relay {
         payload: String,
     },
+    Relayed {
+        success_message: String,
+    },
     Error {
         error_message: String,
     },
