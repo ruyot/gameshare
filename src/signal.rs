@@ -11,11 +11,13 @@ pub enum SignallingMessage {
     Join {
         room_id: String,
     },
+    Joined {
+        success_message: String,
+    },
     Relay {
         payload: String,
     },
     Error {
-        error_id: String,
         error_message: String,
     },
 }
