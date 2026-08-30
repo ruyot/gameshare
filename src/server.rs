@@ -5,7 +5,7 @@ use log::info;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
 use serde_json;
-use crate::room::{Room, assign_room, get_opposing_peer_tx, join_room};
+use crate::room::{Room, assign_room, get_opposing_peer_tx, join_room, remove_room};
 use crate::signal::SignallingMessage;
 
 pub async fn start(addr:&str) -> Result<(), Box<dyn error::Error>>{
@@ -31,12 +31,12 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
         .await
         .expect("There was an Error during the websocket handshake");
 
-    let (write,read) = ws_stream.split();
+    let (mut write, mut read) = ws_stream.split();
 
     // The server doesnt know if the client wants to host a new room or join an existing room 
 
     // Connections need their own internal messaging queues 
-    let (tx, rx) = mpsc::unbounded_channel::<SignallingMessage>();
+    let (tx, mut rx) = mpsc::unbounded_channel::<SignallingMessage>();
 
     // For our connection loop we need to keep track of room id and whether the person sending us (the server) is the host or not
     let mut room_id: Option<String> = None;
@@ -50,13 +50,16 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
 
         // Websocket branch
         // We destruct the option and result and convert the message to text (one of its defined possible fields within the enum)
-        Some(msg) = read.next() => {
+        msg = read.next() => {
             // Because the signalling message enum has both serialize and deserialize we can convert directly into the data we defined in the enum
             // However serde needs a way to differentiate which data type it needs to convert to by picking correctly within the enum
             // To do this differentiation we make use of internal tagging, internal tagging means that the name of the variant is matched against the message when choosing
-            if let Ok(msg) = msg {
-                let text = msg.to_text()?;
-                let parsed_msg: SignallingMessage = serde_json::from_str(text)?;
+            let Some(Ok(msg)) = msg else {
+                break;
+            };
+            
+            let text = msg.to_text()?;
+            let parsed_msg: SignallingMessage = serde_json::from_str(text)?;
             
             match parsed_msg {
                 // Assign - Give me (host) a room (all variants need to define their fields)
@@ -244,9 +247,6 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
 
             }
 
-    
-        }
-
         // Internal channel branch
         Some(msg) = rx.recv() => {
             // Peer receives a message from the opposing peer on the internal channel
@@ -255,41 +255,14 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
             let serialized = serde_json::to_string(&msg);
 
             write.send(Message::text(serialized?)).await?;
-        }
 
-        else => {
-            break;
-        }
+            }
 
         }
 
     }
-/*
-    loop {
-        tokio::select! {
-        // Branch 1: inbound message from clients websocket
-        Some(msg) = read.next() => {
-            // Parse messages here
-            // If something is assign or join - we should handle room setup
-            // This is why we need to know if someone is a host or not because that determines whether or not assign is valid or join is (dont believe we enforce this in the assign room function)
-        
-        }
 
-        // Branch 2: Outbound message from partner via internal channel
-        Some(msg) = rx.recv() => {
-        // In this branch another task gave us a message into this tasks mailbox 
-        // We need to send that message through websocket to the physical device that this task (that we are in) is based off of
-        }
-
-        // Connection closed or channel disconnected
-        else => break,
-
-        } 
-    }    
-}   
-*/
-
-
+    Ok(())
 
 }
 
