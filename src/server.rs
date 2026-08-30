@@ -138,12 +138,105 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
                 
                 // Relay - Let me send a message to my peer
                 SignallingMessage::Relay {payload} => {
-                    if room_id.is_some() {
-                        let id = room_id.unwrap();
-                        let peertx = get_opposing_peer_tx(&id, &map, is_host);
+                    // Check if the peer making the request is even in a room
+
+                    match &room_id {
+                        
+                        None => {
+                            let error = SignallingMessage::Error { error_message : "Join a room first".to_string()};
+
+                            let serialized_error = serde_json::to_string(&error);
+
+                            match serialized_error {
+
+                                Ok(msg) => {
+                                    write.send(Message::text(msg)).await?;
+                                }
+
+                                Err(_) => {
+                                    return Err("Failed to serialize error message for no room on relay".into())
+
+                                }
+
+                            }
+
+                        }
+
+                        Some(id) => {
+                            let peertx = get_opposing_peer_tx(id, &map, is_host);
+
+                            match peertx {
+
+                                Ok(peertx) => {
+                                    // The peer sent us (the server) a message (variant relay) which states that they would like to send a payload to the other peer
+                                    // Ensuring all other conditions are valid we need to send this over through the other peers channel
+                                    // Everything we transmit is of type enum signallingmessage so we need to contruct a relay message to send back using the payload, this is different than the one we got
+
+                                    let package = SignallingMessage::Relay {payload : payload};
+
+                                    // returns Ok() or SendError
+                                    let send_package = peertx.send(package);
+
+                                    match send_package {
+
+                                        Ok(_) => {
+                                            let success = SignallingMessage::Relayed {success_message : "Message sent to peer succesfully".to_string()};
+
+                                            let success_serialized = serde_json::to_string(&success);
+
+                                            match success_serialized {
+                                                Ok(msg) => {
+                                                    write.send(Message::text(msg)).await?;
+                                                }
+                                                Err(_) => {
+                                                    return Err("Failed to serialize success message for relay".into())
+                                                }
+                                            }
+
+                                        }
+
+                                        Err(_) => {
+                                            let error = SignallingMessage::Error {error_message : "Message failed to send over the internal channel, please try again".to_string()};
+                                            let serialized_error = serde_json::to_string(&error);
+
+                                            match serialized_error {
+                                                
+                                                Ok(msg) => {
+                                                    write.send(Message::text(msg)).await?;
+                                                }
+
+                                                Err(_) => {
+                                                    return Err("Failed to serialize error message for failure to send over internal channel during relay".into())
+                                                }
+                                            }
+                                        }
+
+                                    }
+                                }
+
+                                Err(_) => {
+                                    let error = SignallingMessage::Error { error_message : "Failed to retrieve the channel of the opposing peer".to_string()};
+
+                                    let serialized_error = serde_json::to_string(&error);
+
+                                    match serialized_error {
+
+                                        Ok(msg) => {
+                                            write.send(Message::text(msg)).await?;
+                                        }
+
+                                        Err(_) => {
+                                            return Err("Failed to serialize error message for opposing peer retrieval".into())
+                                        }
+
+                                    }
+
+                                }
+
+                            }
+
+                        }
                     }
-                    
-                    // write the payload to the peertx  
                 }
                 // Wildcard for last two that dont need to be matched
                 _ => (),              
