@@ -249,10 +249,17 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
 
         // Internal channel branch
         Some(msg) = rx.recv() => {
-            
+            // Peer receives a message from the opposing peer on the internal channel
+            // The message should be written to the peer who received the internal channel message
+            // Needs to be serialized since its of type SignallingMessage
+            let serialized = serde_json::to_string(&msg);
+
+            write.send(Message::text(serialized?)).await?;
         }
 
-        else => break
+        else => {
+            break;
+        }
 
         }
 
