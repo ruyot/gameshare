@@ -75,7 +75,7 @@ If the sender is peer b give me peer a's inbox handle
 // If the sender is Peer A give them peer B's handle
 // If the sender is Peer B give them peer A's inbox handle
 
-pub fn get_opposing_peer_tx (id:&str, rooms:&MappedRoom, is_host:bool) -> Result<PeerTx, String> {
+pub fn get_opposing_peer_tx(id:&str, rooms:&MappedRoom, is_host:bool) -> Result<PeerTx, String> {
 
     let map = rooms.lock().unwrap();
 
@@ -96,7 +96,7 @@ pub fn get_opposing_peer_tx (id:&str, rooms:&MappedRoom, is_host:bool) -> Result
     }
 }
 
-pub fn remove_room (id:&str, rooms:&MappedRoom) -> Result<(), String> {
+pub fn remove_room(id:&str, rooms:&MappedRoom) -> Result<(), String> {
     let mut map = rooms.lock().unwrap();
     
     if map.remove(id).is_some() {

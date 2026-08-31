@@ -38,7 +38,7 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
     // Connections need their own internal messaging queues 
     let (tx, mut rx) = mpsc::unbounded_channel::<SignallingMessage>();
 
-    // For our connection loop we need to keep track of room id and whether the person sending us (the server) is the host or not
+    // For our connection loop we need to keep track of room id and whether the person sending us (the server) stuff is the host or not
     let mut room_id: Option<String> = None;
 
     let mut is_host = false;
@@ -262,8 +262,33 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
 
     }
 
-    Ok(())
+    // Check if the room_id is none first 
+    // Could be a case where the websocket connection fails even before a room is created
+    let id = room_id;
 
+    match id {
+        Some(id) => {
+            let removed = remove_room(&id, &map);
+            
+            match removed {
+                Ok(_) => {
+                    println!("Peer disconnected and the associated room was removed successfully");
+                }
+
+                Err(_) => {
+                    println!("Peer disconnected and there was an error removing the associated room");
+                }
+
+            }
+
+        }
+        None => {
+            println!("Peer disconnected and there was never an associated room")
+
+        }
+    }
+
+    Ok(())
 }
 
 
