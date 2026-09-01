@@ -20,6 +20,9 @@ pub enum SignallingMessage {
     Relayed {
         success_message: String,
     },
+    Disconnection {
+        disconnection_message: String,
+    },
     Error {
         error_message: String,
     },
