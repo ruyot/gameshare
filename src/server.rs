@@ -266,25 +266,82 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
     // Could be a case where the websocket connection fails even before a room is created
     let id = room_id;
 
+    // We also have to exit with different actions depending on whether or not the current thread is a host or client thread
+
     match id {
         Some(id) => {
-            let removed = remove_room(&id, &map);
-            
-            match removed {
-                Ok(_) => {
-                    println!("Peer disconnected and the associated room was removed successfully");
+            match is_host {
+                // There is a room and the current peer is the host
+                true => {
+                    let removed = remove_room(&id, &map);
+
+                    match removed {
+                        Ok(_) => {
+                            println!("Peer disconnected and the associated room was removed successfully");
+                        }
+
+                        Err(_) => {
+                            println!("Peer disconnected and there was an error removing the associated room");
+                        }
+
+                    }
                 }
 
-                Err(_) => {
-                    println!("Peer disconnected and there was an error removing the associated room");
-                }
+                // There is a room and the current peer is the client
+                false => {
+                    // We dont remove the room completely because the host can wait for the client to rejoin
+                    // Note - based on the architecture if the host is gone the room should already be gone anyway
+                    // We also have to reset the client_tx field in the room struct to become None
 
+                    if let Ok(peertx) = get_opposing_peer_tx(&id, &map, is_host) {
+                        let msg = SignallingMessage::Disconnection { disconnection_message: ("The client has disconnected".to_string()) };
+                        
+                        let sent = peertx.send(msg);
+
+                        match sent {
+                            Ok(_) => {
+                                println!("The host was successfully informed that the client disconnected")
+                            }
+                            Err(_) => {
+                                println!("The host has already disconnected from the room, cannot send client disconnection message");
+                            }
+
+                        }
+              
+                        };
+
+                        // Query the hashmap for this specific room to change the client_tx back to none
+
+                        let rooms = &map;
+
+                        let mut mutable_map = rooms.lock().unwrap();
+
+                        let room = mutable_map.get_mut(&id);
+
+                        match room {
+                            Some(room) => {
+                                if room.client_tx.is_some() {
+                                    room.client_tx = None;
+                                } else {
+                                    return Ok(())
+                                }
+
+                            }
+
+                            None => {
+                                println!("Couldn't find the associated room in the hashmap to reset client_tx")
+                            }
+
+                        }
+                    }
+
+                }
+                
             }
 
-        }
         None => {
+            // There is no room
             println!("Peer disconnected and there was never an associated room")
-
         }
     }
 
