@@ -49,15 +49,17 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
         tokio::select! {   
 
         // Websocket branch
-        // We destruct the option and result and convert the message to text (one of its defined possible fields within the enum)
+        // Allowed to be none for exiting the loop
         msg = read.next() => {
             // Because the signalling message enum has both serialize and deserialize we can convert directly into the data we defined in the enum
             // However serde needs a way to differentiate which data type it needs to convert to by picking correctly within the enum
             // To do this differentiation we make use of internal tagging, internal tagging means that the name of the variant is matched against the message when choosing
+            
             let Some(Ok(msg)) = msg else {
                 break;
             };
-            
+
+            // We destruct the option and result and convert the message to text (one of its defined possible fields within the enum)
             let text = msg.to_text()?;
             let parsed_msg: SignallingMessage = serde_json::from_str(text)?;
             
@@ -252,11 +254,30 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
             // Peer receives a message from the opposing peer on the internal channel
             // The message should be written to the peer who received the internal channel message
             // Needs to be serialized since its of type SignallingMessage
-            let serialized = serde_json::to_string(&msg);
 
-            write.send(Message::text(serialized?)).await?;
+            let serialized = serde_json::to_string(&msg)?;
 
+            // Use {..} to match against the disconnection variant and anything within it
+            if matches!(msg, SignallingMessage::Disconnection {..}) {
+                match is_host {
+                    true => {
+                        write.send(Message::text(serialized)).await?;
+                    }
+                    false => {
+                        write.send(Message::text(serialized)).await?;
+
+                        room_id = None;
+
+                        write.close().await?;
+
+                        break;
+                    }
+                }
+            } else {
+                write.send(Message::text(serialized)).await?;
             }
+
+            } 
 
         }
 
@@ -273,19 +294,27 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
             match is_host {
                 // There is a room and the current peer is the host
                 true => {
-                    let removed = remove_room(&id, &map);
 
-                    match removed {
-                        Ok(_) => {
-                            println!("Peer disconnected and the associated room was removed successfully");
-                        }
+                            // What if the client is still connected to the room even after the host disconnects?
+                            // We should force the client out by sending them a message so that they're also removed on the next iteration of their thread loop
+                            // This message will be of variant disconnection once its sent the client thread should hit it on the internal channel branch 
+                    
+                    if let Ok(client_tx) = get_opposing_peer_tx(&id, &map, is_host) {
+                        let msg = SignallingMessage::Disconnection { disconnection_message: ("The host has left the room, you will now be disconnected".to_string())};
 
-                        Err(_) => {
-                            println!("Peer disconnected and there was an error removing the associated room");
-                        }
+                        remove_room(&id, &map)?;
+                        
+                        client_tx.send(msg)?;
 
-                    }
+                    } else {
+                        println!("There is no client connected to the room so a disconnection message isnt needed");
+
+                        remove_room(&id, &map)?;
+                    };
+
                 }
+
+                
 
                 // There is a room and the current peer is the client
                 false => {
@@ -308,7 +337,7 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
 
                         }
               
-                        };
+                        }; // could have an else check for peertx here but it shouldnt be possible for there to not be a room or a host_tx if theres a room id
 
                         // Query the hashmap for this specific room to change the client_tx back to none
 
@@ -341,7 +370,7 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
 
         None => {
             // There is no room
-            println!("Peer disconnected and there was never an associated room")
+            println!("Peer disconnected or there was never an associated room")
         }
     }
 

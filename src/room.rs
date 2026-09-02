@@ -82,7 +82,7 @@ pub fn get_opposing_peer_tx(id:&str, rooms:&MappedRoom, is_host:bool) -> Result<
     if let Some(room) = map.get(id) {
         if is_host{
             if room.client_tx.is_none() {
-               return Err("The client hasn't connected yet".to_string());
+               return Err("The client isnt there".to_string());
             }
             else{
                 return Ok(room.client_tx.as_ref().unwrap().clone());
