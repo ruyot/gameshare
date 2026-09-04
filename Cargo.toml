@@ -12,3 +12,4 @@ serde_json = "1.0.151"
 tokio = { version = "1.53.1", features = ["full"] }
 tokio-tungstenite = "0.30.0"
 uuid = { version = "1", features = ["v4", "fast-rng"] }
+webrtc = "0.20"

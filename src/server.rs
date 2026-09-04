@@ -1,5 +1,4 @@
-use core::error;
-use std::{collections::HashMap, sync::{Arc, Mutex}}; 
+use std::{error::Error, collections::HashMap, sync::{Arc, Mutex}}; 
 use futures_util::{SinkExt, StreamExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
@@ -7,7 +6,7 @@ use serde_json;
 use crate::room::{Room, assign_room, get_opposing_peer_tx, join_room, remove_room};
 use crate::signal::SignallingMessage;
 
-pub async fn start(addr:&str) -> Result<(), Box<dyn error::Error>>{
+pub async fn start(addr:&str) -> Result<(), Box<dyn Error>>{
 
     let map = Arc::new(Mutex::new(HashMap::<String, Room>::new()));
 
@@ -23,7 +22,7 @@ pub async fn start(addr:&str) -> Result<(), Box<dyn error::Error>>{
     Ok(())
 }
 
-async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room>>>) -> Result<(), Box<dyn error::Error + Send + Sync>> {
+async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room>>>) -> Result<(), Box<dyn Error + Send + Sync>> {
 
     // Creates a struct with both stream (send) and sink (receive)
     let ws_stream = tokio_tungstenite::accept_async(stream)
