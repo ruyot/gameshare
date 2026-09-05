@@ -8,21 +8,41 @@ use webrtc::runtime::{Runtime, Sender, channel};
 use std::sync::Arc;
 
 
-async fn webrtc_engine() ->  {
+async fn webrtc_engine() ->  { 
 
-    let config = RTCConfigurationBuilder::new()
+    let mut media_engine = MediaEngine::default();
+    media_engine.register_default_codecs()?;
+
+    let registry = Registry::new();
+
+    // Interceptors for detecting stuff like packet loss and request retransmission
+    // Default includes NACK, RTCP reports, simulcast headers, and TWCC receiver
+    let registry = register_default_interceptors(registry, &mut media_engine)?;
+
+    // Specifying properties of the WebRTC session using the builder
+    let connection_config = RTCConfigurationBuilder::new()
         .with_ice_servers(vec![RTCIceServer {
             urls: vec!("stun:stun.l.google.com:19302".to_string()),
             ..Default::default()
         }])
         .build();
 
-    
+    // Start the engine with the data channel and whatever else we'll need later
+    let peer_connection = PeerConnectionBuilder::new()
+        .with_configuration(connection_config)
+        .with_udp_addrs(vec!["0.0.0.0:0"]) // Configures the builder with the local udp socket addresses to bind
+        .with_media_engine(media_engine)
+        .with_interceptor_registry(registry)
+        .build()
+        .await?;
 
+    let offer = peer_connection.create_offer(None).await?; // SDP offer
+    peer_connection.set_local_description(offer).await?; // Session description
 
+    // dont need a match to check it cause success would mean not exiting out of the function anyway
+    println!("Description set successfully");
 
-
-
+    Ok(())
 
 }
 
