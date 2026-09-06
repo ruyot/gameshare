@@ -7,8 +7,16 @@ use webrtc::peer_connection::{PeerConnection, PeerConnectionBuilder, PeerConnect
 use webrtc::runtime::{Runtime, Sender, channel};
 use std::sync::Arc;
 
+use crate::signal::SignallingMessage;
+
 
 async fn webrtc_engine() ->  { 
+
+    // Single signal channels to determine whether sdp and ice gathering is done
+    let (done_tx, mut done_rx) = channel::<()>(1);
+    let (gather_complete_tx, mut gather_complete_rx) = channel::<()>(1);
+
+    let runtime = runtime();
 
     let mut media_engine = MediaEngine::default();
     media_engine.register_default_codecs()?;
@@ -30,17 +38,39 @@ async fn webrtc_engine() ->  {
     // Start the engine with the data channel and whatever else we'll need later
     let peer_connection = PeerConnectionBuilder::new()
         .with_configuration(connection_config)
-        .with_udp_addrs(vec!["0.0.0.0:0"]) // Configures the builder with the local udp socket addresses to bind
         .with_media_engine(media_engine)
         .with_interceptor_registry(registry)
+        .with_runtime(runtime.clone())
+        .with_udp_addrs(vec!["0.0.0.0:0"]) // Configures the builder with the local udp socket addresses to bind
         .build()
         .await?;
+
+    // Creating a data channel with the label 'data'
+    let data_channel = peer_connection.create_data_channel("data", None).await?;
+
+    // When you call methods like remote_description(offer)
+    // WebRTC internally reaches into the runtime handle that was given (in peer_connection) and executes
 
     let offer = peer_connection.create_offer(None).await?; // SDP offer
     peer_connection.set_local_description(offer).await?; // Session description
 
-    // dont need a match to check it cause success would mean not exiting out of the function anyway
     println!("Description set successfully");
+
+    // Non trickle ice
+    let _ = gather_complete_rx.recv().await;
+
+    // Check for the sdp information and if it exists send it to the peer
+    if let Some(local_desc) = peer_connection.local_description().await {
+        let serialized_desc = serde_json::to_string(&local_desc)?;
+        let offer = SignallingMessage::Relay { payload: serialized_desc };
+
+
+    } else {
+        println!("Failed to generate local_description")
+    }
+
+
+
 
     Ok(())
 
