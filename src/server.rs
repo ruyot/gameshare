@@ -96,23 +96,35 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
                     match joined {
                         Ok(_) => {
 
-                            let success = SignallingMessage::Joined {success_message : format!("Joined room {provided_id} successfully")};
+                            let success_client = SignallingMessage::Joined {success_message : format!("Joined room {} successfully", provided_id)};
 
-                            let serialized_success = serde_json::to_string(&success);
+                            let serialized_success_client = serde_json::to_string(&success_client);
 
-                            match serialized_success {
+                            // We should also send the host a message here too so that they know when a client joined the room
+                            // This can act as a trigger to begin the SDP offer process (Because at the point in which a client joins a room both are now able to communicate via relay) 
+                            // Offer getting made on host assignment rather than client join could be strange cause ice candidates have a lifespan, better to just make it afterwards then send, would be a micro improvement to do beforehand if any
+                            if let Ok(peertx) = get_opposing_peer_tx(&provided_id, &map, is_host) {
+                                let success_host = SignallingMessage::Joined {success_message : format!("Peer joined room {provided_id} successfully")};
+
+                                peertx.send(success_host)?
+
+                            } else {
+                                return Err("Failed to send join room success message to host peer".into())
+                            }
+
+                            room_id = Some(provided_id);
+                            is_host = false;
+
+                            match serialized_success_client {
                                 Ok(msg) => {
                                     write.send(Message::text(msg)).await?;
-
-                                    is_host = false;
-
-                                    room_id = Some(provided_id);
                                 }
 
                                 Err(_) => {
                                     return Err("Failed to serialize success message for join".into())
                                 }
                             }
+                            // Technically dont need matches for serialization and can handle with ? but thats a later optimization and matches are nice for now
                         }
 
                     
@@ -254,6 +266,12 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
             // Needs to be serialized since its of type SignallingMessage
 
             let serialized = serde_json::to_string(&msg)?;
+
+            /* 
+            *NOTE* for future - need to handle the case of
+            host getting a success client joined message
+            which should start the sdp offer process
+            */
 
             // Use {..} to match against the disconnection variant and anything within it
             if matches!(msg, SignallingMessage::Disconnection {..}) {
