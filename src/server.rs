@@ -5,6 +5,7 @@ use tokio::sync::mpsc;
 use serde_json;
 use crate::room::{Room, assign_room, get_opposing_peer_tx, join_room, remove_room};
 use crate::signal::SignallingMessage;
+use crate::webrtc::peer_connection_builder;
 
 pub async fn start(addr:&str) -> Result<(), Box<dyn Error>>{
 
@@ -267,12 +268,23 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
 
             let serialized = serde_json::to_string(&msg)?;
 
-            /* 
-            *NOTE* for future - need to handle the case of
-            host getting a success client joined message
-            which should start the sdp offer process
-            */
+            // Need to check the case where the host receives a message on the internal channel that the peer joined
+            // This should cause a call of the peer connection builder which uses the webrtc-rs engine
+            // Specific method calls will allow for the sdp offer process to start
+            if matches!(&msg, SignallingMessage::Joined {..} ) && is_host == true {
+                
+                let pc = peer_connection_builder();
 
+                let offer = pc.create_offer(None).await?;
+                
+                pc.set_local_description(offer).await?;
+
+                 
+
+
+
+            } else {
+            
             // Use {..} to match against the disconnection variant and anything within it
             if matches!(msg, SignallingMessage::Disconnection {..}) {
                 match is_host {
@@ -291,8 +303,8 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
                 }
             } else {
                 write.send(Message::text(serialized)).await?;
-            }
-
+                    }
+                }
             } 
 
         }

@@ -1,16 +1,16 @@
 use webrtc::data_channel::{DataChannel, DataChannelEvent};
 use webrtc::peer_connection::{
-    MediaEngine, RTCConfigurationBuilder, RTCIceGatheringState, RTCIceServer,
-    RTCPeerConnectionState, RTCSessionDescription, Registry, register_default_interceptors,};
+    self, MediaEngine, RTCConfigurationBuilder, RTCIceGatheringState, RTCIceServer, RTCPeerConnectionState, RTCSessionDescription, Registry, register_default_interceptors,};
 use webrtc::peer_connection::{PeerConnection, PeerConnectionBuilder, PeerConnectionEventHandler};
 use webrtc::runtime::{Runtime, Sender, channel};
+use std::default;
 use std::error::Error;
 use std::net::ToSocketAddrs;
 use std::sync::Arc;
 use crate::signal::SignallingMessage;
 
 
-async fn peer_connection_builder() -> Result<impl PeerConnection, Box<dyn Error>>{
+pub async fn peer_connection_builder() -> Result<PeerConnectionBuilder<>, Box<dyn Error>>{
 
     let mut media_engine = MediaEngine::default();
     media_engine.register_default_codecs()?;
@@ -38,33 +38,24 @@ async fn peer_connection_builder() -> Result<impl PeerConnection, Box<dyn Error>
         .build()
         .await?;
 
-    // Creating a data channel with the label 'data'
-    // Will want to trigger the creation of a data channel based on an event ie after offers have been exchanged
-    // So ideally after the host sets their remote? cause thats indication of the process being done
-    let data_channel = peer_connection.create_data_channel("data", None).await?;
-
-    // When you call methods like remote_description(offer)
-    // WebRTC internally reaches into the runtime handle that was given (in peer_connection) and executes
-
-    let offer = peer_connection.create_offer(None).await?; // SDP offer
-    peer_connection.set_local_description(offer).await?; // Session description
-
-    println!("Description set successfully");
-
     Ok(peer_connection)
 }
 
+/* 
+// Creating a data channel with the label 'data'
+// Will want to trigger the creation of a data channel based on an event ie after offers have been exchanged
+// So ideally after the host sets their remote? cause thats indication of the process being done
+let data_channel = peer_connection.create_data_channel("data", None).await?;
+*/
 
 
+/*
+// When you call methods like remote_description(offer)
+// WebRTC internally reaches into the runtime handle that was given (in peer_connection) and executes
 
-
-
-
-
-
-
-
-
+let offer = peer_connection.create_offer(None).await?; // SDP offer
+peer_connection.set_local_description(offer).await?; // Session description
+*/
 
  /* 
     let pc = PeerConnectionBuilder::new() 
