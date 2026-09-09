@@ -1,6 +1,6 @@
 use webrtc::data_channel::{DataChannel, DataChannelEvent};
 use webrtc::peer_connection::{
-    self, MediaEngine, RTCConfigurationBuilder, RTCIceGatheringState, RTCIceServer, RTCPeerConnectionState, RTCSessionDescription, Registry, register_default_interceptors,};
+    self, MediaEngine, NoopInterceptor, RTCConfigurationBuilder, RTCIceGatheringState, RTCIceServer, RTCPeerConnectionState, RTCSessionDescription, Registry, register_default_interceptors,};
 use webrtc::peer_connection::{PeerConnection, PeerConnectionBuilder, PeerConnectionEventHandler};
 use webrtc::runtime::{Runtime, Sender, channel};
 use std::default;
@@ -9,8 +9,7 @@ use std::net::ToSocketAddrs;
 use std::sync::Arc;
 use crate::signal::SignallingMessage;
 
-
-pub async fn peer_connection_builder() -> Result<PeerConnectionBuilder<>, Box<dyn Error>>{
+pub async fn peer_connection_builder() -> Result<impl PeerConnection, Box<dyn Error + Send + Sync>>{
 
     let mut media_engine = MediaEngine::default();
     media_engine.register_default_codecs()?;
