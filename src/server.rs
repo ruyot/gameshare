@@ -1,4 +1,5 @@
 use std::{error::Error, collections::HashMap, sync::{Arc, Mutex}}; 
+use webrtc::peer_connection::PeerConnection;
 use futures_util::{SinkExt, StreamExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
@@ -41,6 +42,9 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
     let mut room_id: Option<String> = None;
 
     let mut is_host = false;
+
+    // Per thread webrtc-rs engine instance
+    let pc = peer_connection_builder().await?;
 
     type Message = tokio_tungstenite::tungstenite::protocol::Message; // Simplify pulling the message enum from tokio tungstenite
 
@@ -262,29 +266,48 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
 
         // Internal channel branch
         Some(msg) = rx.recv() => {
+
+            // Need to check the case where the client receives a message on the internal channel containing the hosts offer
+            if matches!(&msg, SignallingMessage::Relay {..} ) {
+
+                match is_host {
+                    true => {
+
+                    } false => {
+                        
+                    }
+
+                }
+            
+            } else {
+
+            // Need to check the case where the host receives a message on the internal channel that the peer joined
+            // This should cause a call of the peer connection builder which uses the webrtc-rs engine
+            // Specific method calls will allow for the sdp offer process to start
+            if matches!(&msg, SignallingMessage::Joined {..} ) && is_host {
+
+                let offer = pc.create_offer(None).await?;
+
+                pc.set_local_description(offer.clone()).await?; // Triggers the start of ice gathering
+
+                if let Some(id) = room_id.clone() {
+                    let peertx = get_opposing_peer_tx(&id, &map, is_host)?;
+
+                    let serialized_offer = serde_json::to_string(&offer)?;
+
+                    let msg = SignallingMessage::Relay { payload: serialized_offer };
+
+                    peertx.send(msg)?;
+
+                }
+            } else {
+            
             // Peer receives a message from the opposing peer on the internal channel
             // The message should be written to the peer who received the internal channel message
             // Needs to be serialized since its of type SignallingMessage
 
             let serialized = serde_json::to_string(&msg)?;
 
-            // Need to check the case where the host receives a message on the internal channel that the peer joined
-            // This should cause a call of the peer connection builder which uses the webrtc-rs engine
-            // Specific method calls will allow for the sdp offer process to start
-            if matches!(&msg, SignallingMessage::Joined {..} ) && is_host == true {
-                
-                let pc = peer_connection_builder();
-
-                let offer = pc.create_offer(None).await?;
-                
-                pc.set_local_description(offer).await?;
-
-                 
-
-
-
-            } else {
-            
             // Use {..} to match against the disconnection variant and anything within it
             if matches!(msg, SignallingMessage::Disconnection {..}) {
                 match is_host {
@@ -301,8 +324,9 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
                         break;
                     }
                 }
-            } else {
+            } else{
                 write.send(Message::text(serialized)).await?;
+                        }
                     }
                 }
             } 
