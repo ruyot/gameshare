@@ -881,6 +881,7 @@ dependencies = [
 name = "gameshare"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "env_logger",
  "futures-util",
  "log",
