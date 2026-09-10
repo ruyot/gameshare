@@ -1,15 +1,12 @@
-use webrtc::data_channel::{DataChannel, DataChannelEvent};
-use webrtc::peer_connection::{
-    self, MediaEngine, NoopInterceptor, RTCConfigurationBuilder, RTCIceGatheringState, RTCIceServer, RTCPeerConnectionState, RTCSessionDescription, Registry, register_default_interceptors,};
+use webrtc::data_channel::{DataChannel, DataChannelEvent, RTCDataChannelInit};
+use webrtc::peer_connection::{ MediaEngine, RTCConfigurationBuilder, RTCIceGatheringState, RTCIceServer, RTCPeerConnectionState, RTCSessionDescription, Registry, register_default_interceptors,};
 use webrtc::peer_connection::{PeerConnection, PeerConnectionBuilder, PeerConnectionEventHandler};
 use webrtc::runtime::{Receiver, Runtime, Sender, channel};
-use std::default;
 use std::error::Error;
-use std::net::ToSocketAddrs;
 use std::sync::Arc;
 use crate::signal::SignallingMessage;
 
-pub async fn peer_connection_builder() -> Result<(impl PeerConnection, Receiver<()>), Box<dyn Error + Send + Sync>>{
+pub async fn peer_connection_builder() -> Result<(impl PeerConnection, Receiver<()>, RTCDataChannelInit), Box<dyn Error + Send + Sync>>{
 
     let mut media_engine = MediaEngine::default();
     media_engine.register_default_codecs()?;
@@ -31,6 +28,16 @@ pub async fn peer_connection_builder() -> Result<(impl PeerConnection, Receiver<
             }
         }
     }
+
+    // Supplying a data channel configuration for the peer means the event of an open data channel doesnt need to be tracked
+    // Id just needs to be supplied and data channel needs to be initialized on both sides with the same configuration
+    let data_channel_specs = RTCDataChannelInit {
+        ordered: true,
+        max_packet_life_time: None,
+        max_retransmits: None,
+        negotiated: Some(172),
+        protocol: "".to_string(),
+    };
 
     let handler = Arc::new(Handler {
         gather_complete_tx,
@@ -58,8 +65,10 @@ pub async fn peer_connection_builder() -> Result<(impl PeerConnection, Receiver<
         .build()
         .await?;
 
-    Ok((peer_connection, gather_complete_rx))
+    Ok((peer_connection, gather_complete_rx, data_channel_specs))
 }
+
+
 
 /* 
 // Creating a data channel with the label 'data'
