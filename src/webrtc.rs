@@ -2,19 +2,39 @@ use webrtc::data_channel::{DataChannel, DataChannelEvent};
 use webrtc::peer_connection::{
     self, MediaEngine, NoopInterceptor, RTCConfigurationBuilder, RTCIceGatheringState, RTCIceServer, RTCPeerConnectionState, RTCSessionDescription, Registry, register_default_interceptors,};
 use webrtc::peer_connection::{PeerConnection, PeerConnectionBuilder, PeerConnectionEventHandler};
-use webrtc::runtime::{Runtime, Sender, channel};
+use webrtc::runtime::{Receiver, Runtime, Sender, channel};
 use std::default;
 use std::error::Error;
 use std::net::ToSocketAddrs;
 use std::sync::Arc;
 use crate::signal::SignallingMessage;
 
-pub async fn peer_connection_builder() -> Result<impl PeerConnection, Box<dyn Error + Send + Sync>>{
+pub async fn peer_connection_builder() -> Result<(impl PeerConnection, Receiver<()>), Box<dyn Error + Send + Sync>>{
 
     let mut media_engine = MediaEngine::default();
     media_engine.register_default_codecs()?;
 
     let registry = Registry::new();
+
+    let (gather_complete_tx, gather_complete_rx) = channel(1);
+    #[derive(Clone)]
+    struct Handler {   // For events like ice candidates
+        gather_complete_tx: Sender<()>
+    }
+
+    #[async_trait::async_trait]
+    impl PeerConnectionEventHandler for Handler {
+        async fn on_ice_gathering_state_change(&self, state: RTCIceGatheringState) {
+            println!("ICE gathering state: {:?}", state);
+            if state == RTCIceGatheringState::Complete {
+                let _ = self.gather_complete_tx.try_send(()); // Sends a message in the channel once gathering is completed
+            }
+        }
+    }
+
+    let handler = Arc::new(Handler {
+        gather_complete_tx,
+    });
 
     // Interceptors for detecting stuff like packet loss and request retransmission
     // Default includes NACK, RTCP reports, simulcast headers, and TWCC receiver
@@ -33,11 +53,12 @@ pub async fn peer_connection_builder() -> Result<impl PeerConnection, Box<dyn Er
         .with_configuration(connection_config)
         .with_media_engine(media_engine)
         .with_interceptor_registry(registry)
+        .with_handler(handler)
         .with_udp_addrs(vec!["0.0.0.0:0"]) // Configures the builder with the local udp socket addresses to bind
         .build()
         .await?;
 
-    Ok(peer_connection)
+    Ok((peer_connection, gather_complete_rx))
 }
 
 /* 
