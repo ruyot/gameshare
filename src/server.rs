@@ -43,8 +43,8 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
 
     let mut is_host = false;
 
-    // Per thread webrtc-rs engine instance
-    let pc = peer_connection_builder().await?;
+    // Per thread webrtc-rs engine instance and indicator for ice gathering
+    let (pc, mut gather_complete_rx) = peer_connection_builder().await?;
 
     type Message = tokio_tungstenite::tungstenite::protocol::Message; // Simplify pulling the message enum from tokio tungstenite
 
@@ -271,10 +271,16 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
             if matches!(&msg, SignallingMessage::Relay {..} ) {
 
                 match is_host {
+                    // Case where host gets an answer
                     true => {
+                        // Set the remote description
 
-                    } false => {
+                    } 
+                    // Case where client gets an offer
+                    false => {
+                        // Set the remote description
                         
+
                     }
 
                 }
@@ -286,9 +292,13 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
             // Specific method calls will allow for the sdp offer process to start
             if matches!(&msg, SignallingMessage::Joined {..} ) && is_host {
 
+
                 let offer = pc.create_offer(None).await?;
 
                 pc.set_local_description(offer.clone()).await?; // Triggers the start of ice gathering
+
+                // Blocking until the state of ice gathering changes to complete
+                let _ = gather_complete_rx.recv().await;
 
                 if let Some(id) = room_id.clone() {
                     let peertx = get_opposing_peer_tx(&id, &map, is_host)?;
