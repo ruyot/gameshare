@@ -1,5 +1,5 @@
 use std::{error::Error, collections::HashMap, sync::{Arc, Mutex}}; 
-use webrtc::peer_connection::PeerConnection;
+use webrtc::peer_connection::{PeerConnection,RTCSessionDescription};
 use futures_util::{SinkExt, StreamExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
@@ -268,23 +268,41 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
         Some(msg) = rx.recv() => {
 
             // Need to check the case where the client receives a message on the internal channel containing the hosts offer
-            if matches!(&msg, SignallingMessage::Relay {..} ) {
+            if let SignallingMessage::Relay { payload } = msg {
+
+                let payload : RTCSessionDescription = serde_json::from_str(&payload)?;
 
                 match is_host {
                     // Case where host gets an answer
-                    true => {
-                        // Set the remote description
+                true => {
+                    // Set the remote description
+                    pc.set_remote_description(payload).await?;
 
-                    } 
+                } 
                     // Case where client gets an offer
-                    false => {
-                        // Set the remote description
-                        
+                false => {
+                    // Set the remote description
+                    pc.set_remote_description(payload).await?;
 
+                    let answer = pc.create_answer(None).await?;
+
+                    pc.set_local_description(answer.clone()).await?;
+
+                    gather_complete_rx.recv().await;
+
+                    if let Some(id) = room_id.clone() {
+                        let peertx = get_opposing_peer_tx(&id, &map, is_host)?;
+
+                        let serialized_answer = serde_json::to_string(&answer)?;
+
+                        let msg = SignallingMessage::Relay { payload : serialized_answer };
+
+                        peertx.send(msg)?;
                     }
 
-                }
-            
+
+                    }   
+                } 
             } else {
 
             // Need to check the case where the host receives a message on the internal channel that the peer joined
@@ -292,13 +310,12 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
             // Specific method calls will allow for the sdp offer process to start
             if matches!(&msg, SignallingMessage::Joined {..} ) && is_host {
 
-
                 let offer = pc.create_offer(None).await?;
 
                 pc.set_local_description(offer.clone()).await?; // Triggers the start of ice gathering
 
                 // Blocking until the state of ice gathering changes to complete
-                let _ = gather_complete_rx.recv().await;
+                gather_complete_rx.recv().await;
 
                 if let Some(id) = room_id.clone() {
                     let peertx = get_opposing_peer_tx(&id, &map, is_host)?;
