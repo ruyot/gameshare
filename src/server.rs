@@ -1,5 +1,6 @@
 use std::{error::Error, collections::HashMap, sync::{Arc, Mutex}}; 
 use webrtc::peer_connection::{PeerConnection,RTCSessionDescription};
+use webrtc::data_channel::{DataChannel, DataChannelEvent};
 use futures_util::{SinkExt, StreamExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
@@ -20,7 +21,7 @@ pub async fn start(addr:&str) -> Result<(), Box<dyn Error>>{
         tokio::spawn(connection_helper(stream, map.clone())); // Hand off execution to background task spawner
 
     }
-
+    
     Ok(())
 }
 
@@ -43,8 +44,8 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
 
     let mut is_host = false;
 
-    // Per thread webrtc-rs engine instance and indicator for ice gathering
-    let (pc, mut gather_complete_rx) = peer_connection_builder().await?;
+    // Per thread webrtc-rs engine instance, indicator for ice gathering (receiver side of channel), and specific pre negotiated data channel configurations
+    let (pc, mut gather_complete_rx, data_channel_specs) = peer_connection_builder().await?;
 
     type Message = tokio_tungstenite::tungstenite::protocol::Message; // Simplify pulling the message enum from tokio tungstenite
 
@@ -278,11 +279,27 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
                     // Set the remote description
                     pc.set_remote_description(payload).await?;
 
+                    println!("SDP process completed");
+
                 } 
                     // Case where client gets an offer
                 false => {
                     // Set the remote description
                     pc.set_remote_description(payload).await?;
+
+                    // Creating a data channel with label data on this side also using the same specs
+                    pc.create_data_channel("data", Some(data_channel_specs.clone())).await?;
+
+                    println!("Data channel created");
+
+
+                    // Next point of action
+                    // Create an event handler in webrtc.rs for the data channel?
+                    // Then check for open state on the channel
+
+
+
+
 
                     let answer = pc.create_answer(None).await?;
 
@@ -309,6 +326,9 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
             // This should cause a call of the peer connection builder which uses the webrtc-rs engine
             // Specific method calls will allow for the sdp offer process to start
             if matches!(&msg, SignallingMessage::Joined {..} ) && is_host {
+
+                // Creating a data channel with label data using the specs
+                pc.create_data_channel("data", Some(data_channel_specs.clone())).await?;
 
                 let offer = pc.create_offer(None).await?;
 
