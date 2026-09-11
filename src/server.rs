@@ -1,6 +1,5 @@
-use std::{error::Error, collections::HashMap, sync::{Arc, Mutex}}; 
+use std::{collections::HashMap, error::Error, sync::{Arc, Mutex}}; 
 use webrtc::peer_connection::{PeerConnection,RTCSessionDescription};
-use webrtc::data_channel::{DataChannel, DataChannelEvent};
 use futures_util::{SinkExt, StreamExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
@@ -8,6 +7,7 @@ use serde_json;
 use crate::room::{Room, assign_room, get_opposing_peer_tx, join_room, remove_room};
 use crate::signal::SignallingMessage;
 use crate::webrtc::peer_connection_builder;
+use crate::data_channel::data_channel_helper;
 
 pub async fn start(addr:&str) -> Result<(), Box<dyn Error>>{
 
@@ -288,18 +288,12 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
                     pc.set_remote_description(payload).await?;
 
                     // Creating a data channel with label data on this side also using the same specs
-                    pc.create_data_channel("data", Some(data_channel_specs.clone())).await?;
+                    let handle = pc.create_data_channel("data", Some(data_channel_specs.clone())).await?;
 
                     println!("Data channel created");
 
-
-                    // Next point of action
-                    // Create an event handler in webrtc.rs for the data channel?
-                    // Then check for open state on the channel
-
-
-
-
+                    // Create a new task for this peers independent data channel handling
+                    tokio::spawn(data_channel_helper(handle.clone())); // Already has Arc data type
 
                     let answer = pc.create_answer(None).await?;
 
@@ -317,7 +311,6 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
                         peertx.send(msg)?;
                     }
 
-
                     }   
                 } 
             } else {
@@ -328,7 +321,10 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
             if matches!(&msg, SignallingMessage::Joined {..} ) && is_host {
 
                 // Creating a data channel with label data using the specs
-                pc.create_data_channel("data", Some(data_channel_specs.clone())).await?;
+                let handle = pc.create_data_channel("data", Some(data_channel_specs.clone())).await?;
+
+                // Create a new task for this peers independent data channel handling
+                tokio::spawn(data_channel_helper(handle.clone()));
 
                 let offer = pc.create_offer(None).await?;
 
