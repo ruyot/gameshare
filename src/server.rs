@@ -268,7 +268,7 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
         // Internal channel branch
         Some(msg) = rx.recv() => {
 
-            // Need to check the case where the client receives a message on the internal channel containing the hosts offer
+            // Need to check the case where the peer receives a message on the internal channel containing offer or answer
             if let SignallingMessage::Relay { payload } = msg {
 
                 let payload : RTCSessionDescription = serde_json::from_str(&payload)?;
@@ -295,9 +295,11 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
                     // Create a new task for this peers independent data channel handling
                     tokio::spawn(data_channel_helper(handle.clone())); // Already has Arc data type
 
-                    let answer = pc.create_answer(None).await?;
+                    let sdp = pc.create_answer(None).await?;
 
-                    pc.set_local_description(answer.clone()).await?;
+                    pc.set_local_description(sdp.clone()).await?;
+
+                    let answer = pc.local_description().await;
 
                     gather_complete_rx.recv().await;
 
@@ -326,12 +328,15 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
                 // Create a new task for this peers independent data channel handling
                 tokio::spawn(data_channel_helper(handle.clone()));
 
-                let offer = pc.create_offer(None).await?;
+                let sdp = pc.create_offer(None).await?;
 
-                pc.set_local_description(offer.clone()).await?; // Triggers the start of ice gathering
+                pc.set_local_description(sdp.clone()).await?; // Triggers the start of ice gathering
 
                 // Blocking until the state of ice gathering changes to complete
                 gather_complete_rx.recv().await;
+
+                // GETS the local description
+                let offer = pc.local_description().await;
 
                 if let Some(id) = room_id.clone() {
                     let peertx = get_opposing_peer_tx(&id, &map, is_host)?;
