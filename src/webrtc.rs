@@ -1,15 +1,14 @@
-use webrtc::data_channel::{DataChannel, DataChannelEvent, RTCDataChannelInit};
-use webrtc::peer_connection::{ MediaEngine, RTCConfigurationBuilder, RTCIceGatheringState, RTCIceServer, RTCPeerConnectionState, RTCSessionDescription, Registry, register_default_interceptors,};
-use webrtc::peer_connection::{PeerConnection, PeerConnectionBuilder, PeerConnectionEventHandler};
-use webrtc::runtime::{Receiver, Runtime, Sender, channel};
+// webrtc
+use webrtc::data_channel::RTCDataChannelInit;
+use webrtc::peer_connection::{MediaEngine, RTCConfigurationBuilder, RTCIceGatheringState, RTCIceServer, register_default_interceptors};
+use webrtc::peer_connection::{Registry, PeerConnection, PeerConnectionBuilder, PeerConnectionEventHandler};
+use webrtc::runtime::{Receiver, Sender, channel};
+
+// std
 use std::error::Error;
 use std::sync::Arc;
-use crate::signal::SignallingMessage;
 
 pub async fn peer_connection_builder() -> Result<(impl PeerConnection, Receiver<()>, RTCDataChannelInit), Box<dyn Error + Send + Sync>>{
-
-    let mut media_engine = MediaEngine::default();
-    media_engine.register_default_codecs()?;
 
     let registry = Registry::new();
 
@@ -18,6 +17,10 @@ pub async fn peer_connection_builder() -> Result<(impl PeerConnection, Receiver<
     struct Handler {   // For events like ice candidates
         gather_complete_tx: Sender<()>
     }
+
+    // Media stuff
+    let mut media_engine = MediaEngine::default();
+    media_engine.register_default_codecs()?;
 
     #[async_trait::async_trait]
     impl PeerConnectionEventHandler for Handler {
@@ -67,8 +70,6 @@ pub async fn peer_connection_builder() -> Result<(impl PeerConnection, Receiver<
 
     Ok((peer_connection, gather_complete_rx, data_channel_specs))
 }
-
-
 
 /* 
 // Creating a data channel with the label 'data'
