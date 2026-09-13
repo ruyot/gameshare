@@ -1,12 +1,13 @@
-// webrtc
 use webrtc::data_channel::RTCDataChannelInit;
 use webrtc::peer_connection::{MediaEngine, RTCConfigurationBuilder, RTCIceGatheringState, RTCIceServer, register_default_interceptors};
 use webrtc::peer_connection::{Registry, PeerConnection, PeerConnectionBuilder, PeerConnectionEventHandler};
+use webrtc::media_stream::track_remote::{TrackRemote};
 use webrtc::runtime::{Receiver, Sender, channel};
-
-// std
 use std::error::Error;
 use std::sync::Arc;
+
+use crate::media_channel::media_channel_helper;
+
 
 pub async fn peer_connection_builder() -> Result<(impl PeerConnection, Receiver<()>, RTCDataChannelInit), Box<dyn Error + Send + Sync>>{
 
@@ -29,6 +30,11 @@ pub async fn peer_connection_builder() -> Result<(impl PeerConnection, Receiver<
             if state == RTCIceGatheringState::Complete {
                 let _ = self.gather_complete_tx.try_send(()); // Sends a message in the channel once gathering is completed
             }
+        }
+
+        async fn on_track(&self, track : Arc<dyn TrackRemote>) {
+            println!("Media channel ready");
+            tokio::spawn(media_channel_helper(track)); // If the track exists spawn a task and pass the track through
         }
     }
 
