@@ -6,8 +6,6 @@ pub async fn data_channel_helper(handle : Arc<dyn DataChannel>) -> Result<(), Bo
     println!("I exist");
 
     while let Some(event) = handle.poll().await {
-        println!("While loop hit");
-
         match event {
             DataChannelEvent::OnOpen => {
                 println!("Data channel opened!");
@@ -19,8 +17,5 @@ pub async fn data_channel_helper(handle : Arc<dyn DataChannel>) -> Result<(), Bo
         }
     }
 
-    println!("out of while loop");
-    
     Ok(())   
 }
-// "5eb7cbcc-f64f-4a26-8835-8999ef23e318"
