@@ -1,13 +1,23 @@
-use std::{collections::HashMap, error::Error, sync::{Arc, Mutex}}; 
-use webrtc::peer_connection::{PeerConnection,RTCSessionDescription};
+use std::{collections::HashMap, error::Error, time::Duration, sync::{Arc, Mutex}}; 
+use webrtc::{media_stream::track_local::TrackLocal, peer_connection::{PeerConnection,RTCSessionDescription}};
+use webrtc::media_stream::track_local::static_sample::TrackLocalStaticSample;
+
+use rtc::media_stream::{MediaStreamTrack, MediaStreamTrackId, MediaStreamId};
+use rtc::rtp_transceiver::rtp_sender::RtpCodecKind;
+use webrtc::rtp_transceiver::RtpSender;
+use rtc::rtp_transceiver::RTCRtpTransceiverDirection;
+use rtc::rtp_transceiver::RTCRtpTransceiverInit;
+
 use futures_util::{SinkExt, StreamExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
 use serde_json;
+
 use crate::room::{Room, assign_room, get_opposing_peer_tx, join_room, remove_room};
 use crate::signal::SignallingMessage;
 use crate::webrtc::peer_connection_builder;
 use crate::data_channel::data_channel_helper;
+use crate::media_channel::media_channel_sender;
 
 pub async fn start(addr:&str) -> Result<(), Box<dyn Error>>{
 
@@ -281,6 +291,12 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
 
                     println!("SDP process completed");
 
+                    let ld = pc.current_local_description().await;
+
+                    let ld = ld.unwrap();
+
+                    println!("{}",ld);
+
                 } 
                     // Case where client gets an offer
                 false => {
@@ -289,8 +305,6 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
 
                     // Creating a data channel with label data on this side also using the same specs
                     let handle = pc.create_data_channel("data", Some(data_channel_specs.clone())).await?;
-
-                    println!("Data channel created");
 
                     // Create a new task for this peers independent data channel handling
                     tokio::spawn(data_channel_helper(handle.clone())); // Already has Arc data type
@@ -302,6 +316,12 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
                     let answer = pc.local_description().await;
 
                     gather_complete_rx.recv().await;
+
+                    let ld = pc.current_local_description().await;
+
+                    let ld = ld.unwrap();
+
+                    println!("{}",ld);
 
                     if let Some(id) = room_id.clone() {
                         let peertx = get_opposing_peer_tx(&id, &map, is_host)?;
@@ -327,6 +347,29 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
 
                 // Create a new task for this peers independent data channel handling
                 tokio::spawn(data_channel_helper(handle.clone()));
+
+                // Create a track instance
+                let track = MediaStreamTrack::new(
+                    MediaStreamTrackId::new(),
+                    MediaStreamId::new(),
+                    "Video-Track".to_owned(),
+                    RtpCodecKind::Video,
+                    vec![],
+                    // Can add specific settings for the video track here
+                );
+
+                // make the track a local sample includes paketizers 
+                let local_track = Arc::new(TrackLocalStaticSample::new(track)?);
+
+                // add the track
+                let track = pc.add_track(local_track).await?;
+
+                // get the local track handle
+                let track = track.track();
+
+                tokio::spawn(media_channel_sender(track.clone()));
+                
+                // note change track to be send only
 
                 let sdp = pc.create_offer(None).await?;
 
