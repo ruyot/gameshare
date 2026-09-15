@@ -289,14 +289,6 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
                     // Set the remote description
                     pc.set_remote_description(payload).await?;
 
-                    println!("SDP process completed");
-
-                    let ld = pc.current_local_description().await;
-
-                    let ld = ld.unwrap();
-
-                    println!("{}",ld);
-
                 } 
                     // Case where client gets an offer
                 false => {
@@ -316,12 +308,6 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
                     let answer = pc.local_description().await;
 
                     gather_complete_rx.recv().await;
-
-                    let ld = pc.current_local_description().await;
-
-                    let ld = ld.unwrap();
-
-                    println!("{}",ld);
 
                     if let Some(id) = room_id.clone() {
                         let peertx = get_opposing_peer_tx(&id, &map, is_host)?;
