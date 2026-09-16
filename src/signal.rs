@@ -1,5 +1,7 @@
 use serde::{Serialize, Deserialize};
 
+
+// Enum message variants for the signalling server
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "type")] // Internal tagging type will be the variant name
 pub enum SignallingMessage {
@@ -25,5 +27,23 @@ pub enum SignallingMessage {
     },
     Error {
         error_message: String,
+    },
+}
+
+// Enum input variants for the data channel
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(tag = "type")]
+pub enum InputMessage {
+    Up {
+        triggered: bool,
+    },
+    Down {
+        triggered: bool,
+    },
+    Left {
+        triggered: bool,
+    },
+    Right {
+        triggered: bool,
     },
 }
