@@ -6,8 +6,30 @@
     <body>
         <p>Example Paragraph<strong>GameShare</strong></p>
     </body>
+    <script src ="javascript.js">
+        // Everything here enclosed by the script is javascript
+        // I can create javascript comments here using //
+        // I can also embed executable code or data directly
+        // Script itself is an html element 
+        // Script can also be used for WebGL, JSON and Wasm as well
+
+        // Need to create a peerconnection for the client 
+        
+        // Create a config for the peerconnection
+        const configuration = {
+            iceServers: [{
+                urls: "stun:stun.l.google.com:19302"
+            }],
+        };
+         
+        const pc = new RTCPeerConnection(configuration); 
+
+        pc.onicecandidate = handleicecandidate(lasticecandidate)
+        
+    </script>
 </html>
 
+<!-- Signalling handshake first-->
 <!-- Open a websocket connection to the signalling server -->
 <!-- Send a Join message with JSON matching the specific enum shape -->
 <!-- Create a peer connection -->
@@ -16,3 +38,24 @@
 
 <!-- Attach the incoming video track -->
 <!--  video element in the html -->
+
+<script>
+    // Futures in javascript are also eager, the moment you call an async function, it starts running immediately
+    // On the main thread until it hits the first await. Even if you never attached an await or .then() to the returned promise, the operation already
+    // Launched into the runtimes task queue
+
+    // In rust futures are lazy. Calling an async fn does nothing except construct it in memory. No execution happens unitl an executor polls it via 
+    // .await, tokio::spawn etc. If you drop a future before polling it the work never happens.
+
+    // TypeScript takes standard JavaScript syntax and adds a thin layer of type annotations on top like : string, interfaces, type aliases, generics 
+    // Because it is a superset of javascript any valid Javascript code is atuomatically valid TypeScript code 
+
+    // The compiler tsc is a pure checker similar to rustc the typescript compiler checks types, flags errors, checks for null/undefined safety, and verifies function signatures before your code ever runs
+
+    // Unlike rustc, typescript does no native code generation, optimization or memeory managagement 
+
+    // u can also update your level of compile time sctrictness in typescript 
+</script>
+
+<!-- Because web apis are written in C++ and compiled into the browser binary there is no readable .js or .ts implementation code for the editor to jump to-->
+<!-- To bridge this gap, msft auto generates lib.dom.d.ts directly from the official w3c web idl specifications this contains zero implementation code is a contract file or type signatures-->
