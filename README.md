@@ -16,7 +16,7 @@ In GameShare the signalling sever ir server.rs. In server.rs an initial asynchro
 
 For every connected peer tokio::spawn is used to create a tokio task for that specific peer. 
 
-```
+```rust
     while let Ok((stream, _)) = try_socket.accept().await{
     
         tokio::spawn(connection_helper(stream, map.clone())); // Hand off execution to background task spawner
@@ -26,5 +26,17 @@ For every connected peer tokio::spawn is used to create a tokio task for that sp
 
 Tokio tasks are similar to os threads in the sense that theyre able to run in the background and do things - however tokio tasks are much smaller and take much less memory eg a few kilobytes dependent on local variables.
 
+Every connected peer takes an immediate call of the connection_helper function along with stream and map as parameters.
+
+Stream being the TCP connection thats created and used via websockets and map being a hashmap that stores room/peer information for O(1) lookup time - more on this later.
+
+```rust
+    let map = Arc::new(Mutex::new(HashMap::<String, Room>::new()));
+
+    let try_socket = TcpListener::bind(&addr).await?;
+```
+Initializing the map and binding a TCP websocket to the servers address
+
+So this is how peers actually connect to the server, but what actually happens in the server? Previously we discussed that the 
 
 
