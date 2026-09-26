@@ -24,7 +24,24 @@
          
         const pc = new RTCPeerConnection(configuration); 
 
-        pc.onicecandidate = handleicecandidate(lasticecandidate)
+        // Note session description should be the messsage you get from the host on the internal channel
+        // The message should have the offer within a payload of type string in an enum variant Relayed 
+        // {"type":"Relay","payload":"offer"}
+        pc.setRemoteDescription(sessionDescription)
+
+        const sdp = pc.createAnswer();
+
+        pc.setLocalDescription(sdp);
+
+        const answer = pc.local_description();
+
+
+
+        pc.onicecandidate = handleicecandidate();
+        pc.onconnectionstatechange = handleconnectionstatechange;
+        pc.oniceconnectionstatechange = handleiceconnecctionstatechange;
+
+
         
     </script>
 </html>
@@ -59,3 +76,15 @@
 
 <!-- Because web apis are written in C++ and compiled into the browser binary there is no readable .js or .ts implementation code for the editor to jump to-->
 <!-- To bridge this gap, msft auto generates lib.dom.d.ts directly from the official w3c web idl specifications this contains zero implementation code is a contract file or type signatures-->
+
+<script>
+/* 
+let sdp = pc.create_answer(None).await?;
+
+pc.set_local_description(sdp.clone()).await?;
+
+let answer = pc.local_description().await;
+
+gather_complete_rx.recv().await;
+*/
+</script>
