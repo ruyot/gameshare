@@ -24,6 +24,9 @@
          
         const pc = new RTCPeerConnection(configuration); 
 
+        const answer = await pc.createAnswer();
+
+
         // Note session description should be the messsage you get from the host on the internal channel
         // The message should have the offer within a payload of type string in an enum variant Relayed 
         // {"type":"Relay","payload":"offer"}
@@ -32,8 +35,6 @@
         const sdp = pc.createAnswer();
 
         pc.setLocalDescription(sdp);
-
-        const answer = pc.local_description();
 
 
 
