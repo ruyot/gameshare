@@ -1,5 +1,6 @@
 <!doctype html>
 <html>
+    <video id="remoteVideo" playsinline autoplay></video>
     <head>
         <title>GameShare</title>
     </head>
@@ -24,24 +25,67 @@
          
         const pc = new RTCPeerConnection(configuration); 
 
-        const answer = await pc.createAnswer();
-
-
         // Note session description should be the messsage you get from the host on the internal channel
         // The message should have the offer within a payload of type string in an enum variant Relayed 
         // {"type":"Relay","payload":"offer"}
+
+        // Set the remote description with the offer
         pc.setRemoteDescription(sessionDescription)
 
-        const sdp = pc.createAnswer();
+        // Create the answer
+        const answer = await pc.createAnswer();
 
-        pc.setLocalDescription(sdp);
-
-
+        // Set the local description with the answer
+        pc.setLocalDescription(answer);
 
         pc.onicecandidate = handleicecandidate();
         pc.onconnectionstatechange = handleconnectionstatechange;
         pc.oniceconnectionstatechange = handleiceconnecctionstatechange;
 
+        // browser operates under a single thread of execution, cant loop and listen for events without blocking everything else
+        // Need to use something like switch statements
+        const onKeyDown = function ( event ) {
+            
+            switch ( event.code ) {
+                
+                case 'KeyW':
+                    forward = true;
+                    break;
+                case 'KeyA':
+                    left = true;
+                    break;
+                case 'KeyD':
+                    right = true;
+                    break;
+                case 'KeyS':
+                    back = true;
+                    break;
+
+            }
+        };
+
+        const onKeyUp = function ( event ) {
+            
+            switch ( event.code ) {
+
+            }
+        }
+        document.addEventListener("keydown", (event) => {
+            switch (event.key.toLowerCase()) {
+                case "w":
+                    keys.w = true;
+                    break;
+                case "a":
+                    keys.a = true;
+                    break;
+                case "s":
+                    keys.s = true;
+                    break;
+                case "d":
+                    keys.d = true;
+                    break;
+            }   
+        });
 
         
     </script>
