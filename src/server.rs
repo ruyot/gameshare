@@ -17,7 +17,6 @@ use crate::room::{Room, assign_room, get_opposing_peer_tx, join_room, remove_roo
 use crate::signal::SignallingMessage;
 use crate::webrtc::peer_connection_builder;
 use crate::data_channel::data_channel_helper;
-use crate::media_channel::media_channel_sender;
 
 pub async fn start(addr:&str) -> Result<(), Box<dyn Error>>{
 
@@ -56,6 +55,7 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
 
     // Per thread webrtc-rs engine instance, indicator for ice gathering (receiver side of channel), and specific pre negotiated data channel configurations
     let (pc, mut gather_complete_rx, data_channel_specs) = peer_connection_builder().await?;
+    // note - since the client peer connection instance shifted to the browser you dont need a webrtc.rs pc instance for the client (only the host)
 
     type Message = tokio_tungstenite::tungstenite::protocol::Message; // Simplify pulling the message enum from tokio tungstenite
 
@@ -333,29 +333,6 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
 
                 // Create a new task for this peers independent data channel handling
                 tokio::spawn(data_channel_helper(handle.clone()));
-
-                // Create a track instance
-                let track = MediaStreamTrack::new(
-                    MediaStreamTrackId::new(),
-                    MediaStreamId::new(),
-                    "Video-Track".to_owned(),
-                    RtpCodecKind::Video,
-                    vec![],
-                    // Can add specific settings for the video track here
-                );
-
-                // make the track a local sample includes paketizers 
-                let local_track = Arc::new(TrackLocalStaticSample::new(track)?);
-
-                // add the track
-                let track = pc.add_track(local_track).await?;
-
-                // get the local track handle
-                let track = track.track();
-
-                tokio::spawn(media_channel_sender(track.clone()));
-                
-                // note change track to be send only
 
                 let sdp = pc.create_offer(None).await?;
 
