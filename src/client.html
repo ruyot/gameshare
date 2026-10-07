@@ -29,6 +29,8 @@
         // The message should have the offer within a payload of type string in an enum variant Relayed 
         // {"type":"Relay","payload":"offer"}
 
+        const socket = new WebSocket("ws://127.0.0.1:8080")
+
         // Set the remote description with the offer
         pc.setRemoteDescription(sessionDescription)
 
@@ -42,6 +44,7 @@
         pc.onconnectionstatechange = handleconnectionstatechange;
         pc.oniceconnectionstatechange = handleiceconnecctionstatechange;
 
+        
         // browser operates under a single thread of execution, cant loop and listen for events without blocking everything else
         // Need to use something like switch statements
         const onKeyDown = function ( event ) {
@@ -67,26 +70,27 @@
         const onKeyUp = function ( event ) {
             
             switch ( event.code ) {
-
+                
+                case 'KeyW':
+                    moveForward = false;
+                    break;
+                
+                case 'KeyA':
+                    moveLeft = false;
+                    break;
+                
+                case 'KeyS':
+                    moveBack = false;
+                    break;
+                
+                case 'KeyD': 
+                    moveRight = false;
+                    break;
             }
-        }
-        document.addEventListener("keydown", (event) => {
-            switch (event.key.toLowerCase()) {
-                case "w":
-                    keys.w = true;
-                    break;
-                case "a":
-                    keys.a = true;
-                    break;
-                case "s":
-                    keys.s = true;
-                    break;
-                case "d":
-                    keys.d = true;
-                    break;
-            }   
-        });
+        };
 
+        document.addEventListener( 'keydown', onKeyDown)
+        document.addEventListener( 'keyup', onKeyUp)
         
     </script>
 </html>
