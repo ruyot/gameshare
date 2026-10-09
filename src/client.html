@@ -29,21 +29,42 @@
         // The message should have the offer within a payload of type string in an enum variant Relayed 
         // {"type":"Relay","payload":"offer"}
 
+        // Instantiate a websocket connection between the client browser and the server
         const socket = new WebSocket("ws://127.0.0.1:8080")
 
-        // Set the remote description with the offer
-        pc.setRemoteDescription(sessionDescription)
+        socket.addEventListener("message", (event) => {
+            const {type, payload} = JSON.parse(event.data);
 
-        // Create the answer
-        const answer = await pc.createAnswer();
+            if (type === "Relay") {
 
-        // Set the local description with the answer
-        pc.setLocalDescription(answer);
+                // start creating the answer here
+                // reminder to convert the payload (offer) from string to RTCSessionDescription
 
-        pc.onicecandidate = handleicecandidate();
-        pc.onconnectionstatechange = handleconnectionstatechange;
-        pc.oniceconnectionstatechange = handleiceconnecctionstatechange;
+                // Set the remote description with the offer
+                pc.setRemoteDescription(payload)
 
+                // Create the answer
+                const answer = await pc.createAnswer();
+
+                // Set the local description with the answer
+                pc.setLocalDesription(answer);
+
+                // do ice candidate stuff here
+                pc.onicecandidate = handleicecandidate();
+                pc.onconnectionstatechange = handleconnectionstatechange;
+                pc.oniceconnectionstatechange = handleiceconnecctionstatechange;
+
+                // send it back after gathering ice is completed
+
+                const answer_msg = "{'type':'Relay','payload':"${answer}"}"
+
+                socket.send()
+
+            }
+            
+
+        })
+    
         
         // browser operates under a single thread of execution, cant loop and listen for events without blocking everything else
         // Need to use something like switch statements

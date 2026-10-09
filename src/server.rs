@@ -43,8 +43,6 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
 
     let (mut write, mut read) = ws_stream.split();
 
-    // The server doesnt know if the client wants to host a new room or join an existing room 
-
     // Connections need their own internal messaging queues 
     let (tx, mut rx) = mpsc::unbounded_channel::<SignallingMessage>();
 
@@ -277,9 +275,9 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
 
         // Internal channel branch
         Some(msg) = rx.recv() => {
-
+            
             // Need to check the case where the peer receives a message on the internal channel containing offer or answer
-            if let SignallingMessage::Relay { payload } = msg {
+            if let SignallingMessage::Relay { payload } = &msg {
 
                 let payload : RTCSessionDescription = serde_json::from_str(&payload)?;
 
@@ -292,6 +290,17 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
                 } 
                     // Case where client gets an offer
                 false => {
+
+                    // send the offer back up to the client browser engine
+                    // calling this answer notification for now
+
+                    let serialized_answer_notif = serde_json::to_string(&msg)?;
+                    
+                    // This should get sent up to client.html - we'll be able to catch it in the inline js
+                    write.send(Message::text(serialized_answer_notif)).await?;
+
+                    /* OLDER 
+                    - When a webrtc.rs peer connection instance was used for both client and host instead of a browser pc instance for the client
                     // Set the remote description
                     pc.set_remote_description(payload).await?;
 
@@ -318,6 +327,7 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
 
                         peertx.send(msg)?;
                     }
+                    */
 
                     }   
                 } 
