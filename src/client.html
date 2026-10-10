@@ -54,11 +54,11 @@
                 pc.onconnectionstatechange = handleconnectionstatechange;
                 pc.oniceconnectionstatechange = handleiceconnecctionstatechange;
 
+                // wip - will need to fix
+                const answer_msg = `"{'type':'Relay','payload':${answer}}!"`
+                
                 // send it back after gathering ice is completed
-
-                const answer_msg = "{'type':'Relay','payload':"${answer}"}"
-
-                socket.send()
+                socket.send(answer_msg)
 
             }
             
