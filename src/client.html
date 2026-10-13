@@ -5,7 +5,7 @@
         <title>GameShare</title>
     </head>
     <body>
-        <p>Example Paragraph<strong>GameShare</strong></p>
+        <p><strong> GameShare</strong></p>
     </body>
     <script src ="javascript.js">
         // Everything here enclosed by the script is javascript
@@ -32,7 +32,7 @@
         // Instantiate a websocket connection between the client browser and the server
         const socket = new WebSocket("ws://127.0.0.1:8080")
 
-        socket.addEventListener("message", (event) => {
+        socket.addEventListener("message", async (event) => {
             const {type, payload} = JSON.parse(event.data);
 
             if (type === "Relay") {
@@ -47,24 +47,28 @@
                 const answer = await pc.createAnswer();
 
                 // Set the local description with the answer
-                pc.setLocalDesription(answer);
+                await pc.setLocalDesription(answer);
 
                 // do ice candidate stuff here
-                pc.onicecandidate = handleicecandidate();
-                pc.onconnectionstatechange = handleconnectionstatechange;
-                pc.oniceconnectionstatechange = handleiceconnecctionstatechange;
+                const complete = false;
 
-                // wip - will need to fix
-                const answer_msg = `"{'type':'Relay','payload':${answer}}!"`
-                
-                // send it back after gathering ice is completed
-                socket.send(answer_msg)
+                pc.addEventListener("icegatheringstatechange", (event) => {
+                    switch (pc.iceGatheringState) {
+                        case "gathering":
+                            println("Ice candidate gathering for sdp answer currently in progress")
+                        case "complete":
+                            complete = true;
+                            println("Ice candidate gathering for sdp answer completed")
+                    }
+                });
 
+                if (complete === true) {
+                    const answer_msg = `"{'type':'Relay','payload':${answer}}!"`
+
+                    socket.send(answer_msg)
+                }
             }
-            
-
         })
-    
         
         // browser operates under a single thread of execution, cant loop and listen for events without blocking everything else
         // Need to use something like switch statements
