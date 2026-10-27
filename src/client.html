@@ -37,6 +37,7 @@
 
         input.addEventListener("keydown", (event) => {
             if (event.key === "Enter" && input.value.trim() !== "") {
+                event.preventDefault();
                 const id = input.value;
                 console.log(id);
                 const join_room = `{"type":"Join","room_id":"${id}"}`;
@@ -44,15 +45,13 @@
                 socket.send(join_room);
                 input.value = "";
             }
-        }); // CURRENT STATE - joining a room seems to work well, the host thread creates a data channel and ice gathering moves to complete for the host
-            // However afterwards the message coming back up from the client thread (the start the answer notification) isnt getting picked up?
-            // suspicions: maybe the way its written below with the socket.addEventListener is incorrect? 
-            // or is the message thats coming in just not getting picked up correctly?
-            // could try debugging by adding a console.log() for the event data just to see if there is even any event data
-
+        }); 
+        
         socket.addEventListener("message", async (event) => {
             console.log(event.data)
             const {type, payload} = JSON.parse(event.data);
+            console.log(type)
+            console.log(payload)
 
             if (type === "Relay") {
 
@@ -61,12 +60,18 @@
 
                 // Set the remote description with the offer
                 await pc.setRemoteDescription(payload);
+                
+                console.log("set the remote description")
 
                 // Create the answer
                 const answer = await pc.createAnswer();
+                
+                console.log("created the answer")
 
                 // Set the local description with the answer
                 await pc.setLocalDesription(answer);
+
+                console.log("set the local description")
 
                 // do ice candidate stuff here
                 const complete = false;
@@ -87,7 +92,7 @@
                     socket.send(answer_msg);
                 }
             }
-        })
+        }) // unhandled promise rejection type error
         
         // browser operates under a single thread of execution, cant loop and listen for events without blocking everything else
         // Need to use something like switch statements
