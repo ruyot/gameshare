@@ -5,15 +5,19 @@
         <title>GameShare</title>
     </head>
     <body>
-        <p><strong> GameShare</strong></p>
+        <p><strong>GameShare</strong></p>
     </body>
-    <script src ="javascript.js">
-        // Everything here enclosed by the script is javascript
-        // I can create javascript comments here using //
-        // I can also embed executable code or data directly
-        // Script itself is an html element 
-        // Script can also be used for WebGL, JSON and Wasm as well
-
+    <form>
+        <div>
+            <label for="roomid">Enter a room_id: </label>
+            <input type="text" id="roomid" name="id"  />
+        </div>
+        <div>
+            <button>Submit</button>
+        </div>
+    </form>
+    <script>
+        console.log("@#(*$U*@(3u9*#U()*u(U#984u(3u84093*U)(*#$()*$($#)))))")
         // Need to create a peerconnection for the client 
         
         // Create a config for the peerconnection
@@ -25,14 +29,29 @@
          
         const pc = new RTCPeerConnection(configuration); 
 
-        // Note session description should be the messsage you get from the host on the internal channel
-        // The message should have the offer within a payload of type string in an enum variant Relayed 
-        // {"type":"Relay","payload":"offer"}
-
-        // Instantiate a websocket connection between the client browser and the server
+        // Instantiate a websocket connection between the client (browser) and the server
         const socket = new WebSocket("ws://127.0.0.1:8080")
 
+        // When the client presses a button eg join room and enters the id on the frontend they should be able to join
+        const input = document.querySelector("input");
+
+        input.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" && input.value.trim() !== "") {
+                const id = input.value;
+                console.log(id);
+                const join_room = `{"type":"Join","room_id":"${id}"}`;
+                console.log(join_room);
+                socket.send(join_room);
+                input.value = "";
+            }
+        }); // CURRENT STATE - joining a room seems to work well, the host thread creates a data channel and ice gathering moves to complete for the host
+            // However afterwards the message coming back up from the client thread (the start the answer notification) isnt getting picked up?
+            // suspicions: maybe the way its written below with the socket.addEventListener is incorrect? 
+            // or is the message thats coming in just not getting picked up correctly?
+            // could try debugging by adding a console.log() for the event data just to see if there is even any event data
+
         socket.addEventListener("message", async (event) => {
+            console.log(event.data)
             const {type, payload} = JSON.parse(event.data);
 
             if (type === "Relay") {
@@ -41,7 +60,7 @@
                 // reminder to convert the payload (offer) from string to RTCSessionDescription
 
                 // Set the remote description with the offer
-                pc.setRemoteDescription(payload)
+                await pc.setRemoteDescription(payload);
 
                 // Create the answer
                 const answer = await pc.createAnswer();
@@ -55,17 +74,17 @@
                 pc.addEventListener("icegatheringstatechange", (event) => {
                     switch (pc.iceGatheringState) {
                         case "gathering":
-                            println("Ice candidate gathering for sdp answer currently in progress")
+                            println("Ice candidate gathering for sdp answer currently in progress");
                         case "complete":
                             complete = true;
-                            println("Ice candidate gathering for sdp answer completed")
+                            println("Ice candidate gathering for sdp answer completed");
                     }
                 });
 
                 if (complete === true) {
-                    const answer_msg = `"{'type':'Relay','payload':${answer}}!"`
-
-                    socket.send(answer_msg)
+                    const answer_msg = `{"type":"Relay","payload":"${answer}"}`;
+                    console.log(answer_msg);
+                    socket.send(answer_msg);
                 }
             }
         })
@@ -75,7 +94,7 @@
         const onKeyDown = function ( event ) {
             
             switch ( event.code ) {
-                
+
                 case 'KeyW':
                     forward = true;
                     break;
