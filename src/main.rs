@@ -3,7 +3,6 @@ mod room;
 mod signal;
 mod webrtc;
 mod data_channel;
-mod media_channel;
 
 const ADDR:&str = "127.0.0.1:8080"; // Server address
 
