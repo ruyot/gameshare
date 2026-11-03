@@ -64,7 +64,7 @@
                 
                 console.log("remote description set")
 
-                var answer = await pc.createAnswer();
+                const answer = await pc.createAnswer();
                 
                 console.log("answer created")
 
@@ -82,7 +82,7 @@
                 pc.addEventListener("icegatheringstatechange", (event) => {
                     if (pc.iceGatheringState === "complete") {
                         console.log("Ice candidate gathering for sdp answer completed")
-                        const answer_msg = `{"type":"Relay","payload":"${answer}}"}`;
+                        const answer_msg = `{"type":"Relay","payload":${JSON.stringify(pc.localDescription)}}`;
                         console.log(answer_msg);
                         socket.send(answer_msg);
                         console.log("finished sdp answer and offer exchange")
