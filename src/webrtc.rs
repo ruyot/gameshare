@@ -36,7 +36,7 @@ pub async fn peer_connection_builder() -> Result<(impl PeerConnection, Receiver<
         ordered: true,
         max_packet_life_time: None,
         max_retransmits: None,
-        negotiated: Some(172),
+        negotiated: None,
         protocol: "".to_string(),
     };
 
