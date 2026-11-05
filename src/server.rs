@@ -275,7 +275,6 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
 
         // Internal channel branch
         Some(msg) = rx.recv() => {
-            
             // Need to check the case where the peer receives a message on the internal channel containing offer or answer
             if let SignallingMessage::Relay { payload } = &msg {
 
@@ -285,8 +284,20 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
                     // Case where host gets an answer
                 true => {
                     // Set the remote description
-                    pc.set_remote_description(payload).await?;
+                    let remote_description = pc.set_remote_description(payload).await;
+                    
+                    match remote_description {
+                        Ok(_) => {
+                            let success_msg = "host remote description set successfully";
+                             
+                            write.send(Message::text(success_msg)).await?;
+                        }
+                        Err(_) => {
+                            let failure_msg = "failed to set host remote description";
 
+                            write.send(Message::text(failure_msg)).await?;
+                        }
+                    };
                 } 
                     // Case where client gets an offer
                 false => {
