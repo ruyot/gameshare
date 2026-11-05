@@ -29,7 +29,7 @@
         const pc = new RTCPeerConnection(configuration); 
 
         // Instantiate a websocket connection between the client (browser) and the server
-        const socket = new WebSocket("replace with local ip of host machine")
+        const socket = new WebSocket("////////////")
 
         // When the client presses a button eg join room and enters the id on the frontend they should be able to join
         const input = document.querySelector("input");
@@ -76,14 +76,14 @@
                 } catch (error) {
                     console.log("error during answer creation process", error)
                 }
-
                 // do ice candidate stuff here
 
                 pc.addEventListener("icegatheringstatechange", (event) => {
                     if (pc.iceGatheringState === "complete") {
                         console.log("Ice candidate gathering for sdp answer completed")
-                        const answer_msg = `{"type":"Relay","payload":${JSON.stringify(pc.localDescription)}}`;
+                        const answer_msg = `{"type":"Relay","payload":${JSON.stringify(JSON.stringify(pc.localDescription))}}`;
                         console.log(answer_msg);
+                        console.log(JSON.stringify(JSON.stringify(pc.localDescription)))
                         socket.send(answer_msg);
                         console.log("finished sdp answer and offer exchange")
                     }
@@ -99,6 +99,10 @@
                     if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
                         console.log("ice connection finished")
                     }
+                })
+
+                pc.addEventListener("datachannel", (event) => {
+                    // Do data channel things here
                 })
             }
         });
