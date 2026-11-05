@@ -143,7 +143,7 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
 
                     
                         Err(_) => {
-                            let error = SignallingMessage::Error { error_message : "Failed to join a rooom, are you sure the provided id is correct or that the room exists?".to_string()};
+                            let error = SignallingMessage::Error { error_message : "Failed to join a room, are you sure the provided id is correct or that the room exists?".to_string()};
                             
                             let serialized_error = serde_json::to_string(&error);
 
