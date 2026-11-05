@@ -17,20 +17,19 @@
         </div>
     </form>
     <script>
-        console.log("@#(*$U*@(3u9*#U()*u(U#984u(3u84093*U)(*#$()*$($#)))))")
-        // Need to create a peerconnection for the client 
-        
+
         // Create a config for the peerconnection
         const configuration = {
             iceServers: [{
                 urls: "stun:stun.l.google.com:19302"
             }],
         };
-         
+                
+        // Need to create a peerconnection for the client
         const pc = new RTCPeerConnection(configuration); 
 
         // Instantiate a websocket connection between the client (browser) and the server
-        const socket = new WebSocket("ws://127.0.0.1:8080")
+        const socket = new WebSocket("replace with local ip of host machine")
 
         // When the client presses a button eg join room and enters the id on the frontend they should be able to join
         const input = document.querySelector("input");
@@ -46,53 +45,63 @@
                 input.value = "";
             }
         }); 
-        
+
         socket.addEventListener("message", async (event) => {
             console.log(event.data)
+
             const {type, payload} = JSON.parse(event.data);
-            console.log(type)
+
             console.log(payload)
 
             if (type === "Relay") {
-
                 // start creating the answer here
-                // reminder to convert the payload (offer) from string to RTCSessionDescription
 
-                // Set the remote description with the offer
-                await pc.setRemoteDescription(payload);
+                try {
+
+                const payload_object = JSON.parse(payload)
+
+                await pc.setRemoteDescription(payload_object);
                 
-                console.log("set the remote description")
+                console.log("remote description set")
 
-                // Create the answer
                 const answer = await pc.createAnswer();
                 
-                console.log("created the answer")
+                console.log("answer created")
 
                 // Set the local description with the answer
-                await pc.setLocalDesription(answer);
+                await pc.setLocalDescription(answer);
 
                 console.log("set the local description")
 
+                } catch (error) {
+                    console.log("error during answer creation process", error)
+                }
+
                 // do ice candidate stuff here
-                const complete = false;
 
                 pc.addEventListener("icegatheringstatechange", (event) => {
-                    switch (pc.iceGatheringState) {
-                        case "gathering":
-                            println("Ice candidate gathering for sdp answer currently in progress");
-                        case "complete":
-                            complete = true;
-                            println("Ice candidate gathering for sdp answer completed");
+                    if (pc.iceGatheringState === "complete") {
+                        console.log("Ice candidate gathering for sdp answer completed")
+                        const answer_msg = `{"type":"Relay","payload":${JSON.stringify(pc.localDescription)}}`;
+                        console.log(answer_msg);
+                        socket.send(answer_msg);
+                        console.log("finished sdp answer and offer exchange")
                     }
                 });
 
-                if (complete === true) {
-                    const answer_msg = `{"type":"Relay","payload":"${answer}"}`;
-                    console.log(answer_msg);
-                    socket.send(answer_msg);
-                }
+                pc.addEventListener("connectionstatechange", (event) => {
+                    if (pc.connectionState === "connected") {
+                        console.log("connection state changed to completed")
+                    }
+                });
+
+                pc.addEventListener("iceconnectionstatechange", (event) => {
+                    if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
+                        console.log("ice connection finished")
+                    }
+                })
             }
-        }) // unhandled promise rejection type error
+        });
         
         // browser operates under a single thread of execution, cant loop and listen for events without blocking everything else
         // Need to use something like switch statements
