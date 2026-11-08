@@ -7,12 +7,15 @@ use tokio::sync::mpsc;
 use serde_json;
 
 use rtc::media_stream::MediaStreamTrack;
+use webrtc::media_stream::track_local::TrackLocal;
 use rtc::rtp_transceiver::rtp_sender::{RTCRtpCodec, RtpCodecKind};
+use webrtc::media_stream::track_local::static_sample::TrackLocalStaticSample;
 use rtc::rtp_transceiver::rtp_sender::{RTCRtpEncodingParameters, RTCRtpCodingParameters};
 
 use crate::signal::SignallingMessage;
 use crate::webrtc::peer_connection_builder;
 use crate::data_channel::data_channel_helper;
+use crate::media_channel::media_channel_helper;
 use crate::room::{Room, assign_room, get_opposing_peer_tx, join_room, remove_room};
 
 pub async fn start(addr:&str) -> Result<(), Box<dyn Error>>{
@@ -351,7 +354,8 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
 
                 // Create a new task for this peers independent data channel handling
                 tokio::spawn(data_channel_helper(data_handle.clone()));
-
+                
+                // Configuring a media track for creation
                 let media_stream_track = MediaStreamTrack::new(
                     "".to_string(),
                     "".to_string(),
@@ -359,20 +363,23 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
                     RtpCodecKind::Video,
                     vec![RTCRtpEncodingParameters {
                         rtp_coding_parameters: RTCRtpCodingParameters {
-                            ssrc: Some(172)
+                            ssrc: Some(),
                             ..Default::default()
                         },
                         codec: RTCRtpCodec::default(),
                         ..Default::default()
                     }],
-                );
+                ); 
                 
-                let track_local = new(media_stream_track : MediaStreamTrack)?;
+                // Creating a local static sample track and adding the track to the peer connection instance
+                let tlss = TrackLocalStaticSample::new(media_stream_track)?;
+                
+                let media_track = Arc::new(tlss);
 
-                let media_handle = pc.add_track(track_local);
-
+                pc.add_track(Arc::clone(&media_track) as Arc<dyn TrackLocal>).await?;
+                
                 // Creating a new task for this peers independent media channel handling
-                tokio::spawn(media_channel_helper(handle.clone()));
+                tokio::spawn(media_channel_helper(media_track.clone()));
 
                 let sdp = pc.create_offer(None).await?;
 
