@@ -1,10 +1,19 @@
 <!doctype html>
 <html>
-    <video id="video-stream" playsinline autoplay></video>
+    <style>
+        video {
+            position: fixed;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 0;
+            object-fit: contain;
+        };
+    </style>
     <head>
         <title>GameShare</title>
     </head>
     <body>
+        <video playsinline autoplay></video>
         <p><strong>GameShare</strong></p>
     </body>
     <form>
@@ -51,12 +60,16 @@
             const {type, payload} = JSON.parse(event.data);
 
             if (type === "Relay") {
+
+                const videoElement = document.querySelector("video")
+
                 try {
 
                 pc.addEventListener("track", (event) => {
-                    const videoElement = document.querySelector("video")
                     videoElement.srcObject = event.streams[0];
                     console.log("video element set with media track (srcObject)")
+                    videoElement.style.opacity = 1
+                    videoElement.style.zIndex = 1
                 });
 
                 // Start creating the answer here
@@ -81,6 +94,10 @@
                 }
                 // do ice candidate stuff here
 
+                videoElement.addEventListener("playing", (event) => {
+                    console.log("video is actively playing")
+                });
+
                 pc.addEventListener("icegatheringstatechange", (event) => {
                     if (pc.iceGatheringState === "complete") {
                         console.log("Ice candidate gathering for sdp answer completed")
@@ -93,6 +110,17 @@
                 pc.addEventListener("connectionstatechange", (event) => {
                     if (pc.connectionState === "connected") {
                         console.log("connection state changed to completed")
+
+                        async function playVideo() {
+                        try {
+                            await videoElement.play();
+                            console.log("started playing video")
+                        } catch (err) {
+                            console.log("error playing video")
+                            } 
+                        }
+
+                        playVideo();
                     }
                 });
 
@@ -108,17 +136,6 @@
                 });
             }
         });
-
-        /*
-        async function playVideo() {
-            try {
-                await video.play();
-                console.log("playing video")
-            } catch (err) {
-                console.log("error playing video")
-            }
-        }
-        */
 
         // browser operates under a single thread of execution, cant loop and listen for events without blocking everything else
         // Need to use something like switch statements
