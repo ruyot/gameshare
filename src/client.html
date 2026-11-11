@@ -1,6 +1,6 @@
 <!doctype html>
 <html>
-    <video id="remoteVideo" playsinline autoplay></video>
+    <video id="video-stream" playsinline autoplay></video>
     <head>
         <title>GameShare</title>
     </head>
@@ -29,7 +29,7 @@
         const pc = new RTCPeerConnection(configuration); 
 
         // Instantiate a websocket connection between the client (browser) and the server
-        const socket = new WebSocket("////////////")
+        const socket = new WebSocket("")
 
         // When the client presses a button eg join room and enters the id on the frontend they should be able to join
         const input = document.querySelector("input");
@@ -47,16 +47,19 @@
         }); 
 
         socket.addEventListener("message", async (event) => {
-            console.log(event.data)
 
             const {type, payload} = JSON.parse(event.data);
 
-            console.log(payload)
-
             if (type === "Relay") {
-                // start creating the answer here
-
                 try {
+
+                pc.addEventListener("track", (event) => {
+                    const videoElement = document.querySelector("video")
+                    videoElement.srcObject = event.streams[0];
+                    console.log("video element set with media track (srcObject)")
+                });
+
+                // Start creating the answer here
 
                 const payload_object = JSON.parse(payload)
 
@@ -82,8 +85,6 @@
                     if (pc.iceGatheringState === "complete") {
                         console.log("Ice candidate gathering for sdp answer completed")
                         const answer_msg = `{"type":"Relay","payload":${JSON.stringify(JSON.stringify(pc.localDescription))}}`;
-                        console.log(answer_msg);
-                        console.log(JSON.stringify(JSON.stringify(pc.localDescription)))
                         socket.send(answer_msg);
                         console.log("finished sdp answer and offer exchange")
                     }
@@ -99,14 +100,26 @@
                     if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
                         console.log("ice connection finished")
                     }
-                })
+                });
 
                 pc.addEventListener("datachannel", (event) => {
                     // Do data channel things here
-                })
+                    // inboundDataChannel = event.channel
+                });
             }
         });
-        
+
+        /*
+        async function playVideo() {
+            try {
+                await video.play();
+                console.log("playing video")
+            } catch (err) {
+                console.log("error playing video")
+            }
+        }
+        */
+
         // browser operates under a single thread of execution, cant loop and listen for events without blocking everything else
         // Need to use something like switch statements
         const onKeyDown = function ( event ) {
