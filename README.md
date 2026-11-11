@@ -1,6 +1,14 @@
 # GameShare
+### <p style="font-size:20px; text-align: center;">Current Progress</p>
+<video width="700" height="200" controls>
+    <source src="v1.mov" type="video/mp4">
+</video>
 
-Gameshare is a peer to peer application that allows a host to stream a video game through their machine to a user. 
+> As you can see the media stream on the client side is currently pretty laggy, im gonna be working on improving this next and adding input handling!
+
+## What is GameShare?
+
+GameShare is a peer to peer application that allows a host to stream a video game through their machine to a user. 
 
 The overall goal is for the user to be able to interact and play the game as if theyre directly on the hosts machine with negligible latency. 
 
@@ -71,4 +79,6 @@ pub enum SignallingMessage {
     },
 }
 ```
+
+
 
