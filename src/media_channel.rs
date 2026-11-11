@@ -1,13 +1,11 @@
-use std::{default, error::Error, net::UdpSocket, sync::Arc, vec};
-use webrtc::{media_stream::{Track, track_local::TrackLocal, track_remote::{TrackRemote, TrackRemoteEvent}}, rtp_transceiver::RtpSender, runtime::{AsyncUdpSocket, Runtime, TokioRuntime}};
+use std::{error::Error, sync::Arc};
+use webrtc::{media_stream::{Track, track_local::TrackLocal}};
 use webrtc::media_stream::track_local::static_sample::TrackLocalStaticSample;
-use bytes::{Bytes, BytesMut};
-use rtc_rtp::{Packet,Header};
+use bytes::BytesMut;
 use rtc::{media_stream::MediaStreamTrackState, shared::marshal::Unmarshal};
 use rtc::rtp;
-use webrtc::runtime;
 
-pub async fn media_channel_helper(track : Arc<TrackLocalStaticSample>) -> Result<(), Box<dyn Error + Send + Sync>>{
+pub async fn media_channel_helper(track : Arc<TrackLocalStaticSample>, ssrc : u32) -> Result<(), Box<dyn Error + Send + Sync>>{
     
     let track_status = track.ready_state().await;
 
@@ -15,9 +13,10 @@ pub async fn media_channel_helper(track : Arc<TrackLocalStaticSample>) -> Result
         MediaStreamTrackState::Unspecified => {
             println!("Media Channel Unknown");
         }
+
         MediaStreamTrackState::Live => {
             println!("Media Channel Created!");
-            
+
             // Listening for incoming rtp packets from ffmpeg via udp listener
             let addr = "";
 
@@ -38,7 +37,8 @@ pub async fn media_channel_helper(track : Arc<TrackLocalStaticSample>) -> Result
                                 let mut message = BytesMut::from(&buf[..packet_size]);
 
                                 match rtp::packet::Packet::unmarshal(&mut message) { 
-                                    Ok(message) => {
+                                    Ok(mut message) => {
+                                        message.header.ssrc = ssrc;
                                         if let Err(_) = track.write_rtp(message).await {
                                             return Err("write rtp error".into())
                                         }
