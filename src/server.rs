@@ -356,6 +356,8 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
                 tokio::spawn(data_channel_helper(data_handle.clone()));
                 
                 // Configuring a media track for creation
+                let ssrc = rand::random::<u32>();
+
                 let media_stream_track = MediaStreamTrack::new(
                     "".to_string(),
                     "".to_string(),
@@ -363,7 +365,7 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
                     RtpCodecKind::Video,
                     vec![RTCRtpEncodingParameters {
                         rtp_coding_parameters: RTCRtpCodingParameters {
-                            ssrc: Some(),
+                            ssrc: Some(ssrc),
                             ..Default::default()
                         },
                         codec: RTCRtpCodec::default(),
@@ -379,7 +381,7 @@ async fn connection_helper(stream: TcpStream, map:Arc<Mutex<HashMap<String, Room
                 pc.add_track(Arc::clone(&media_track) as Arc<dyn TrackLocal>).await?;
                 
                 // Creating a new task for this peers independent media channel handling
-                tokio::spawn(media_channel_helper(media_track.clone()));
+                tokio::spawn(media_channel_helper(media_track.clone(), ssrc));
 
                 let sdp = pc.create_offer(None).await?;
 
