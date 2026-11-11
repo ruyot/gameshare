@@ -1,10 +1,8 @@
 # GameShare
 ### <p style="font-size:20px; text-align: center;">Current Progress</p>
-<video width="700" height="200" controls>
-    <source src="v1.mov" type="video/mp4">
-</video>
+![v1](v1.gif)
 
-> As you can see the media stream on the client side is currently pretty laggy, im gonna be working on improving this next and adding input handling!
+> As you can see the media stream on the client side is currently pretty laggy (the gray box is from the scoreboard overlay), im gonna be working on improving this next and adding input handling!
 
 ## What is GameShare?
 
@@ -79,6 +77,4 @@ pub enum SignallingMessage {
     },
 }
 ```
-
-
 
